@@ -1,19 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useActionState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Search, Download, Send, MoreHorizontal, CheckCircle, Clock, XCircle, AlertCircle } from 'lucide-react'
+import { Plus, Search, Download, Send, MoreHorizontal, CheckCircle, Clock, AlertCircle, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-
-const invoices = [
-  { id: 'INV-2025-087', client: 'Nexus Ventures', amount: '₹90,000', date: 'Jul 15, 2025', due: 'Jul 29, 2025', status: 'Paid', project: 'E-Commerce Platform' },
-  { id: 'INV-2025-086', client: 'Capital Corp', amount: '₹1,20,000', date: 'Jul 10, 2025', due: 'Jul 24, 2025', status: 'Overdue', project: 'FinanceAI Dashboard' },
-  { id: 'INV-2025-085', client: 'TechFlow Inc', amount: '₹60,000', date: 'Jul 5, 2025', due: 'Jul 19, 2025', status: 'Paid', project: 'AI Chatbot' },
-  { id: 'INV-2025-084', client: 'Bloom Studio', amount: '₹37,500', date: 'Jul 1, 2025', due: 'Jul 15, 2025', status: 'Sent', project: 'Brand Kit' },
-  { id: 'INV-2025-083', client: 'AppWave', amount: '₹47,500', date: 'Jun 25, 2025', due: 'Jul 9, 2025', status: 'Paid', project: 'Mobile Redesign' },
-  { id: 'INV-2025-082', client: 'GrowthLabs', amount: '₹24,000', date: 'Jun 20, 2025', due: 'Jul 4, 2025', status: 'Draft', project: 'SEO Strategy' },
-  { id: 'INV-2025-081', client: 'Summit Holdings', amount: '₹55,000', date: 'Jun 15, 2025', due: 'Jun 29, 2025', status: 'Paid', project: 'Corporate Website' },
-]
+import { createInvoice, type CreateInvoiceState } from '@/lib/actions/invoices'
+import { formatINR } from '@/lib/format'
+import type { InvoiceRow } from '@/lib/queries/invoices'
 
 const statusConfig: Record<string, { color: string; icon: React.ElementType }> = {
   Paid: { color: 'text-emerald-500 bg-emerald-500/10', icon: CheckCircle },
@@ -22,22 +15,93 @@ const statusConfig: Record<string, { color: string; icon: React.ElementType }> =
   Draft: { color: 'text-muted-foreground bg-muted', icon: Clock },
 }
 
-const summary = [
-  { label: 'Total Invoiced', value: '₹4,34,000', color: 'text-foreground' },
-  { label: 'Paid', value: '₹2,92,500', color: 'text-emerald-500' },
-  { label: 'Outstanding', value: '₹1,17,500', color: 'text-amber-500' },
-  { label: 'Overdue', value: '₹1,20,000', color: 'text-red-500' },
-]
+const initialState: CreateInvoiceState = {}
 
-export function InvoicesContent() {
+function NewInvoiceModal({
+  onClose, clients, projects,
+}: {
+  onClose: () => void
+  clients: { id: string; name: string }[]
+  projects: { id: string; name: string; clientId: string }[]
+}) {
+  const [state, formAction, pending] = useActionState(createInvoice, initialState)
+  const [clientId, setClientId] = useState('')
+
+  useEffect(() => {
+    if (state.success) onClose()
+  }, [state.success, onClose])
+
+  const projectOptions = projects.filter((p) => !clientId || p.clientId === clientId)
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="w-full max-w-md bg-card border border-border rounded-3xl p-6 relative"
+      >
+        <button onClick={onClose} className="absolute top-5 right-5 text-muted-foreground hover:text-foreground" aria-label="Close">
+          <X className="w-5 h-5" />
+        </button>
+        <h3 className="text-lg font-bold mb-4">New Invoice</h3>
+        <form action={formAction} className="space-y-3">
+          <select
+            name="clientId"
+            required
+            value={clientId}
+            onChange={(e) => setClientId(e.target.value)}
+            className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+          >
+            <option value="" disabled>Select client</option>
+            {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          <select name="projectId" defaultValue="" className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
+            <option value="">No project (optional)</option>
+            {projectOptions.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+          <div className="grid grid-cols-2 gap-3">
+            <input name="amount" type="number" required placeholder="Amount (₹)" className="px-4 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+            <input name="dueDate" type="date" required className="px-4 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+          </div>
+          <select name="status" defaultValue="Draft" className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
+            <option value="Draft">Draft</option>
+            <option value="Sent">Sent</option>
+            <option value="Paid">Paid</option>
+          </select>
+          {state.error && <p className="text-sm text-destructive">{state.error}</p>}
+          <Button type="submit" className="w-full" disabled={pending}>
+            {pending ? 'Creating…' : 'Create Invoice'}
+          </Button>
+        </form>
+      </motion.div>
+    </div>
+  )
+}
+
+export function InvoicesContent({
+  initialInvoices, summary, clients, projects,
+}: {
+  initialInvoices: InvoiceRow[]
+  summary: { totalInvoiced: number; paid: number; outstanding: number; overdue: number }
+  clients: { id: string; name: string }[]
+  projects: { id: string; name: string; clientId: string }[]
+}) {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
+  const [showNew, setShowNew] = useState(false)
 
-  const filtered = invoices.filter((inv) => {
-    const matchSearch = inv.client.toLowerCase().includes(search.toLowerCase()) || inv.id.toLowerCase().includes(search.toLowerCase())
+  const filtered = initialInvoices.filter((inv) => {
+    const matchSearch = inv.client.toLowerCase().includes(search.toLowerCase()) || inv.number.toLowerCase().includes(search.toLowerCase())
     const matchStatus = statusFilter === 'All' || inv.status === statusFilter
     return matchSearch && matchStatus
   })
+
+  const summaryCards = [
+    { label: 'Total Invoiced', value: formatINR(summary.totalInvoiced), color: 'text-foreground' },
+    { label: 'Paid', value: formatINR(summary.paid), color: 'text-emerald-500' },
+    { label: 'Outstanding', value: formatINR(summary.outstanding), color: 'text-amber-500' },
+    { label: 'Overdue', value: formatINR(summary.overdue), color: 'text-red-500' },
+  ]
 
   return (
     <div className="space-y-5 max-w-7xl">
@@ -45,16 +109,16 @@ export function InvoicesContent() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold">Invoices</h2>
-          <p className="text-sm text-muted-foreground">{invoices.length} invoices this month</p>
+          <p className="text-sm text-muted-foreground">{initialInvoices.length} invoices total</p>
         </div>
-        <Button size="sm" className="gap-1.5">
+        <Button size="sm" className="gap-1.5" onClick={() => setShowNew(true)}>
           <Plus className="w-4 h-4" /> New Invoice
         </Button>
       </div>
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {summary.map((item, i) => (
+        {summaryCards.map((item, i) => (
           <motion.div
             key={item.label}
             initial={{ opacity: 0, y: 12 }}
@@ -112,7 +176,7 @@ export function InvoicesContent() {
             </thead>
             <tbody className="divide-y divide-border">
               {filtered.map((inv, i) => {
-                const { color, icon: StatusIcon } = statusConfig[inv.status]
+                const { color, icon: StatusIcon } = statusConfig[inv.status] ?? statusConfig.Draft!
                 return (
                   <motion.tr
                     key={inv.id}
@@ -121,10 +185,10 @@ export function InvoicesContent() {
                     transition={{ delay: i * 0.04 }}
                     className="hover:bg-muted/20 transition-colors"
                   >
-                    <td className="py-3 px-4 font-mono text-xs text-muted-foreground">{inv.id}</td>
+                    <td className="py-3 px-4 font-mono text-xs text-muted-foreground">{inv.number}</td>
                     <td className="py-3 px-4 font-medium text-foreground">{inv.client}</td>
                     <td className="py-3 px-4 text-muted-foreground hidden md:table-cell text-xs">{inv.project}</td>
-                    <td className="py-3 px-4 text-right font-semibold text-foreground">{inv.amount}</td>
+                    <td className="py-3 px-4 text-right font-semibold text-foreground">{formatINR(inv.amount)}</td>
                     <td className="py-3 px-4 text-muted-foreground text-xs hidden sm:table-cell">{inv.due}</td>
                     <td className="py-3 px-4">
                       <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-full ${color}`}>
@@ -145,10 +209,19 @@ export function InvoicesContent() {
                   </motion.tr>
                 )
               })}
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
+                    No invoices match your search.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       </div>
+
+      {showNew && <NewInvoiceModal onClose={() => setShowNew(false)} clients={clients} projects={projects} />}
     </div>
   )
 }

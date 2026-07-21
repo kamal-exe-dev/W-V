@@ -1,5 +1,7 @@
 import { MessagesContent } from '@/components/dashboard/messages-content'
+import { getConversations } from '@/lib/queries/messages'
 
-export default function MessagesPage() {
-  return <MessagesContent />
+export default async function MessagesPage() {
+  const conversations = await getConversations()
+  return <MessagesContent initialConversations={conversations} />
 }

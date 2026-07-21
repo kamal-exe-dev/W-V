@@ -9,39 +9,10 @@ import {
   DollarSign, FolderKanban, Users, TrendingUp, ArrowUpRight,
   ArrowDownRight, Clock, CheckCircle, AlertCircle, Circle,
 } from 'lucide-react'
+import { formatINR } from '@/lib/format'
+import type { getOverviewData } from '@/lib/queries/overview'
 
-const revenueData = [
-  { month: 'Jan', revenue: 285000, expenses: 120000 },
-  { month: 'Feb', revenue: 320000, expenses: 135000 },
-  { month: 'Mar', revenue: 298000, expenses: 118000 },
-  { month: 'Apr', revenue: 410000, expenses: 155000 },
-  { month: 'May', revenue: 375000, expenses: 140000 },
-  { month: 'Jun', revenue: 460000, expenses: 160000 },
-  { month: 'Jul', revenue: 520000, expenses: 175000 },
-]
-
-const projectData = [
-  { name: 'Web Dev', count: 12, color: '#2563EB' },
-  { name: 'Design', count: 8, color: '#7c3aed' },
-  { name: 'AI', count: 5, color: '#059669' },
-  { name: 'Marketing', count: 6, color: '#d97706' },
-  { name: 'Branding', count: 4, color: '#dc2626' },
-]
-
-const recentProjects = [
-  { name: 'Nexus E-Commerce Platform', client: 'Nexus Ventures', status: 'In Progress', progress: 72, due: 'Aug 15' },
-  { name: 'FinanceAI Dashboard', client: 'Capital Corp', status: 'Review', progress: 90, due: 'Jul 28' },
-  { name: 'Brand Identity System', client: 'Bloom Studio', status: 'In Progress', progress: 45, due: 'Sep 1' },
-  { name: 'AI Chatbot Integration', client: 'TechFlow Inc', status: 'Completed', progress: 100, due: 'Jul 20' },
-  { name: 'Mobile App Redesign', client: 'AppWave', status: 'Planning', progress: 15, due: 'Sep 30' },
-]
-
-const topClients = [
-  { name: 'Nexus Ventures', spend: '₹4,80,000', projects: 4, avatar: 'NV' },
-  { name: 'Capital Corp', spend: '₹3,20,000', projects: 2, avatar: 'CC' },
-  { name: 'TechFlow Inc', spend: '₹2,75,000', projects: 3, avatar: 'TF' },
-  { name: 'Bloom Studio', spend: '₹1,90,000', projects: 2, avatar: 'BS' },
-]
+type OverviewData = Awaited<ReturnType<typeof getOverviewData>>
 
 const statusColors: Record<string, string> = {
   'In Progress': 'text-blue-500 bg-blue-500/10',
@@ -56,6 +27,9 @@ const statusIcons: Record<string, React.ElementType> = {
   'Completed': CheckCircle,
   'Planning': Clock,
 }
+
+const serviceColors = ['#2563EB', '#7c3aed', '#059669', '#d97706', '#dc2626']
+const avatarPalette = ['bg-blue-500/10 text-blue-500', 'bg-violet-500/10 text-violet-500', 'bg-emerald-500/10 text-emerald-500', 'bg-amber-500/10 text-amber-500']
 
 function StatCard({
   title, value, change, positive, icon: Icon, color,
@@ -82,13 +56,16 @@ function StatCard({
       <p className="text-2xl font-bold text-foreground">{value}</p>
       <div className={`flex items-center gap-1 mt-1.5 text-xs font-medium ${positive ? 'text-emerald-500' : 'text-red-500'}`}>
         {positive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-        {change} vs last month
+        {change}
       </div>
     </motion.div>
   )
 }
 
-export function DashboardOverview() {
+export function DashboardOverview({ data }: { data: OverviewData }) {
+  const { stats, revenueChart, projectsByService, recentProjects, topClients } = data
+  const projectData = projectsByService.map((p, i) => ({ ...p, color: serviceColors[i % serviceColors.length]! }))
+
   return (
     <div className="space-y-6 max-w-7xl">
       {/* Greeting */}
@@ -101,33 +78,33 @@ export function DashboardOverview() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Monthly Revenue"
-          value="₹5,20,000"
-          change="+13.2%"
-          positive={true}
+          value={formatINR(stats.monthlyRevenue)}
+          change={`${stats.revenueChangePct >= 0 ? '+' : ''}${stats.revenueChangePct.toFixed(1)}% vs last month`}
+          positive={stats.revenueChangePct >= 0}
           icon={DollarSign}
           color="bg-primary/10 text-primary"
         />
         <StatCard
           title="Active Projects"
-          value="24"
-          change="+3"
+          value={String(stats.activeProjectsCount)}
+          change={`+${stats.newProjectsThisMonth} this month`}
           positive={true}
           icon={FolderKanban}
           color="bg-violet-500/10 text-violet-500"
         />
         <StatCard
           title="Total Clients"
-          value="87"
-          change="+5"
+          value={String(stats.totalClients)}
+          change={`+${stats.newClientsThisMonth} this month`}
           positive={true}
           icon={Users}
           color="bg-emerald-500/10 text-emerald-500"
         />
         <StatCard
           title="Avg. Project Value"
-          value="₹68,400"
-          change="-2.1%"
-          positive={false}
+          value={formatINR(stats.avgProjectValue)}
+          change="Across all projects"
+          positive={true}
           icon={TrendingUp}
           color="bg-amber-500/10 text-amber-500"
         />
@@ -145,7 +122,9 @@ export function DashboardOverview() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-semibold">Revenue Overview</h3>
-              <p className="text-xs text-muted-foreground">Jan – Jul 2025</p>
+              <p className="text-xs text-muted-foreground">
+                {revenueChart[0]?.month} – {revenueChart[revenueChart.length - 1]?.month}
+              </p>
             </div>
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
               <span className="flex items-center gap-1.5">
@@ -159,7 +138,7 @@ export function DashboardOverview() {
             </div>
           </div>
           <ResponsiveContainer width="100%" height={200}>
-            <AreaChart data={revenueData}>
+            <AreaChart data={revenueChart}>
               <defs>
                 <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#2563EB" stopOpacity={0.15} />
@@ -180,7 +159,7 @@ export function DashboardOverview() {
               />
               <Tooltip
                 contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', fontSize: '12px' }}
-                formatter={(v: number) => [`₹${(v).toLocaleString('en-IN')}`, '']}
+                formatter={(v: number) => [formatINR(v), '']}
               />
               <Area type="monotone" dataKey="revenue" stroke="#2563EB" strokeWidth={2} fill="url(#revGrad)" />
               <Area type="monotone" dataKey="expenses" stroke="#94a3b8" strokeWidth={1.5} fill="url(#expGrad)" />
@@ -196,7 +175,7 @@ export function DashboardOverview() {
           className="bg-card border border-border rounded-2xl p-5"
         >
           <h3 className="font-semibold mb-1">Projects by Service</h3>
-          <p className="text-xs text-muted-foreground mb-4">Active this quarter</p>
+          <p className="text-xs text-muted-foreground mb-4">Currently active</p>
           <ResponsiveContainer width="100%" height={160}>
             <BarChart data={projectData} layout="vertical">
               <XAxis type="number" tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
@@ -234,7 +213,7 @@ export function DashboardOverview() {
           </div>
           <div className="space-y-3">
             {recentProjects.map((project) => {
-              const StatusIcon = statusIcons[project.status]
+              const StatusIcon = statusIcons[project.status] ?? Circle
               return (
                 <div key={project.name} className="flex items-center gap-3">
                   <div className="flex-1 min-w-0">
@@ -274,16 +253,16 @@ export function DashboardOverview() {
             <a href="/dashboard/clients" className="text-xs text-primary hover:underline">View all</a>
           </div>
           <div className="space-y-3">
-            {topClients.map((client) => (
+            {topClients.map((client, i) => (
               <div key={client.name} className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">
-                  {client.avatar}
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 ${avatarPalette[i % avatarPalette.length]}`}>
+                  {client.name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{client.name}</p>
                   <p className="text-xs text-muted-foreground">{client.projects} projects</p>
                 </div>
-                <p className="text-sm font-semibold text-foreground shrink-0">{client.spend}</p>
+                <p className="text-sm font-semibold text-foreground shrink-0">{formatINR(client.spend)}</p>
               </div>
             ))}
           </div>

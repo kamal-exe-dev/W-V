@@ -1,16 +1,8 @@
-import { DashboardStub } from '@/components/dashboard/stub'
+import { ProposalsContent } from '@/components/dashboard/proposals-content'
+import { getProposals } from '@/lib/queries/proposals'
+import { getClientOptions } from '@/lib/queries/projects'
 
-export default function ProposalsPage() {
-  return (
-    <DashboardStub
-      title="Proposals"
-      description="Create and send professional proposals to prospects and clients."
-      items={[
-        { label: 'Draft Proposals', value: '3' },
-        { label: 'Sent', value: '12' },
-        { label: 'Accepted', value: '9' },
-        { label: 'Win Rate', value: '75%' },
-      ]}
-    />
-  )
+export default async function ProposalsPage() {
+  const [{ rows, summary }, clients] = await Promise.all([getProposals(), getClientOptions()])
+  return <ProposalsContent initialProposals={rows} summary={summary} clients={clients} />
 }

@@ -1,6 +1,8 @@
 import { DashboardSidebar } from '@/components/dashboard/sidebar'
 import { DashboardTopbar } from '@/components/dashboard/topbar'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata = {
   title: 'Dashboard | Web & Visuals',
 }

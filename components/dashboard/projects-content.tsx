@@ -1,64 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useActionState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Search, Filter, MoreHorizontal, Calendar, User2, Clock, CheckCircle, Circle, AlertCircle, ArrowUpRight } from 'lucide-react'
+import { Plus, Search, MoreHorizontal, Calendar, User2, Clock, CheckCircle, Circle, AlertCircle, ArrowUpRight, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { createProject, type CreateProjectState } from '@/lib/actions/projects'
+import { formatINR } from '@/lib/format'
+import type { ProjectRow } from '@/lib/queries/projects'
 
 type Status = 'All' | 'Planning' | 'In Progress' | 'Review' | 'Completed'
 
 const statuses: Status[] = ['All', 'Planning', 'In Progress', 'Review', 'Completed']
-
-const projects = [
-  {
-    id: 1, name: 'Nexus E-Commerce Platform', client: 'Nexus Ventures',
-    service: 'Web Development', status: 'In Progress', progress: 72,
-    due: 'Aug 15, 2025', value: '₹1,80,000', priority: 'High',
-    team: ['AK', 'VP', 'RS'],
-  },
-  {
-    id: 2, name: 'FinanceAI Dashboard', client: 'Capital Corp',
-    service: 'AI Solutions', status: 'Review', progress: 90,
-    due: 'Jul 28, 2025', value: '₹2,40,000', priority: 'High',
-    team: ['AK', 'NS'],
-  },
-  {
-    id: 3, name: 'Brand Identity System', client: 'Bloom Studio',
-    service: 'Branding', status: 'In Progress', progress: 45,
-    due: 'Sep 1, 2025', value: '₹75,000', priority: 'Medium',
-    team: ['AP'],
-  },
-  {
-    id: 4, name: 'AI Chatbot Integration', client: 'TechFlow Inc',
-    service: 'AI Solutions', status: 'Completed', progress: 100,
-    due: 'Jul 20, 2025', value: '₹1,20,000', priority: 'High',
-    team: ['AK', 'VP'],
-  },
-  {
-    id: 5, name: 'Mobile App Redesign', client: 'AppWave',
-    service: 'UI/UX Design', status: 'Planning', progress: 15,
-    due: 'Sep 30, 2025', value: '₹95,000', priority: 'Medium',
-    team: ['AP', 'RS'],
-  },
-  {
-    id: 6, name: 'SEO & Content Strategy', client: 'GrowthLabs',
-    service: 'SEO', status: 'In Progress', progress: 60,
-    due: 'Aug 30, 2025', value: '₹48,000', priority: 'Low',
-    team: ['NS'],
-  },
-  {
-    id: 7, name: 'Corporate Website Revamp', client: 'Summit Holdings',
-    service: 'Web Development', status: 'Planning', progress: 5,
-    due: 'Oct 15, 2025', value: '₹2,20,000', priority: 'High',
-    team: ['AK', 'AP', 'RS'],
-  },
-  {
-    id: 8, name: 'Social Media Campaign', client: 'FoodieApp',
-    service: 'Digital Marketing', status: 'Completed', progress: 100,
-    due: 'Jul 10, 2025', value: '₹35,000', priority: 'Low',
-    team: ['NS'],
-  },
-]
 
 const statusConfig: Record<string, { color: string; icon: React.ElementType }> = {
   'In Progress': { color: 'text-blue-500 bg-blue-500/10', icon: Circle },
@@ -73,12 +25,83 @@ const priorityColors: Record<string, string> = {
   Low: 'text-emerald-500 bg-emerald-500/10',
 }
 
-export function ProjectsContent() {
+const initialState: CreateProjectState = {}
+
+function NewProjectModal({
+  onClose, clients, teamMembers,
+}: {
+  onClose: () => void
+  clients: { id: string; name: string }[]
+  teamMembers: { id: string; name: string }[]
+}) {
+  const [state, formAction, pending] = useActionState(createProject, initialState)
+
+  useEffect(() => {
+    if (state.success) onClose()
+  }, [state.success, onClose])
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="w-full max-w-lg bg-card border border-border rounded-3xl p-6 relative max-h-[90vh] overflow-y-auto"
+      >
+        <button onClick={onClose} className="absolute top-5 right-5 text-muted-foreground hover:text-foreground" aria-label="Close">
+          <X className="w-5 h-5" />
+        </button>
+        <h3 className="text-lg font-bold mb-4">New Project</h3>
+        <form action={formAction} className="space-y-3">
+          <input name="name" required placeholder="Project name" className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+          <div className="grid grid-cols-2 gap-3">
+            <select name="clientId" required defaultValue="" className="px-4 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
+              <option value="" disabled>Select client</option>
+              {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+            <input name="service" required placeholder="Service (e.g. Web Development)" className="px-4 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <select name="priority" defaultValue="Medium" className="px-4 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
+              <option value="Low">Low</option>
+              <option value="Medium">Medium</option>
+              <option value="High">High</option>
+            </select>
+            <input name="value" type="number" required placeholder="Value (₹)" className="px-4 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+            <input name="dueDate" type="date" required className="px-4 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1.5">Assign team members</label>
+            <div className="flex flex-wrap gap-2">
+              {teamMembers.map((m) => (
+                <label key={m.id} className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border border-border cursor-pointer hover:border-primary/40">
+                  <input type="checkbox" name="teamMemberIds" value={m.id} className="accent-primary" />
+                  {m.name}
+                </label>
+              ))}
+            </div>
+          </div>
+          {state.error && <p className="text-sm text-destructive">{state.error}</p>}
+          <Button type="submit" className="w-full" disabled={pending}>
+            {pending ? 'Creating…' : 'Create Project'}
+          </Button>
+        </form>
+      </motion.div>
+    </div>
+  )
+}
+
+export function ProjectsContent({
+  initialProjects, clients, teamMembers,
+}: {
+  initialProjects: ProjectRow[]
+  clients: { id: string; name: string }[]
+  teamMembers: { id: string; name: string }[]
+}) {
   const [activeStatus, setActiveStatus] = useState<Status>('All')
   const [search, setSearch] = useState('')
-  const [view, setView] = useState<'grid' | 'list'>('list')
+  const [showNew, setShowNew] = useState(false)
 
-  const filtered = projects.filter((p) => {
+  const filtered = initialProjects.filter((p) => {
     const matchStatus = activeStatus === 'All' || p.status === activeStatus
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
       p.client.toLowerCase().includes(search.toLowerCase())
@@ -91,9 +114,9 @@ export function ProjectsContent() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold">Projects</h2>
-          <p className="text-sm text-muted-foreground">{projects.length} total projects</p>
+          <p className="text-sm text-muted-foreground">{initialProjects.length} total projects</p>
         </div>
-        <Button size="sm" className="gap-1.5">
+        <Button size="sm" className="gap-1.5" onClick={() => setShowNew(true)}>
           <Plus className="w-4 h-4" /> New Project
         </Button>
       </div>
@@ -129,7 +152,7 @@ export function ProjectsContent() {
       {/* Project List */}
       <div className="space-y-2">
         {filtered.map((project, i) => {
-          const { color, icon: StatusIcon } = statusConfig[project.status]
+          const { color, icon: StatusIcon } = statusConfig[project.status] ?? statusConfig.Planning!
           return (
             <motion.div
               key={project.id}
@@ -174,9 +197,9 @@ export function ProjectsContent() {
 
                 {/* Team */}
                 <div className="hidden lg:flex items-center -space-x-2">
-                  {project.team.map((member) => (
+                  {project.team.map((member, idx) => (
                     <div
-                      key={member}
+                      key={`${member}-${idx}`}
                       className="w-7 h-7 rounded-full bg-primary/20 border-2 border-card flex items-center justify-center text-[10px] font-bold text-primary"
                     >
                       {member}
@@ -185,7 +208,7 @@ export function ProjectsContent() {
                 </div>
 
                 {/* Value */}
-                <p className="hidden sm:block font-semibold text-sm text-foreground w-24 text-right">{project.value}</p>
+                <p className="hidden sm:block font-semibold text-sm text-foreground w-24 text-right">{formatINR(project.value)}</p>
 
                 {/* Actions */}
                 <div className="flex items-center gap-1">
@@ -204,18 +227,14 @@ export function ProjectsContent() {
 
       {filtered.length === 0 && (
         <div className="py-16 text-center text-muted-foreground">
-          <FolderEmpty />
+          <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center mx-auto">
+            <AlertCircle className="w-6 h-6 text-muted-foreground" />
+          </div>
           <p className="mt-2 text-sm">No projects match your search.</p>
         </div>
       )}
-    </div>
-  )
-}
 
-function FolderEmpty() {
-  return (
-    <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center mx-auto">
-      <AlertCircle className="w-6 h-6 text-muted-foreground" />
+      {showNew && <NewProjectModal onClose={() => setShowNew(false)} clients={clients} teamMembers={teamMembers} />}
     </div>
   )
 }

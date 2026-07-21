@@ -38,6 +38,7 @@ export function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [servicesOpen, setServicesOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const { theme, setTheme } = useTheme()
   const pathname = usePathname()
 
@@ -46,6 +47,8 @@ export function Navbar() {
     window.addEventListener('scroll', onScroll)
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
+
+  useEffect(() => setMounted(true), [])
 
   return (
     <>
@@ -128,11 +131,11 @@ export function Navbar() {
                 className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                 aria-label="Toggle theme"
               >
-                {theme === 'dark' ? (
+                {mounted && (theme === 'dark' ? (
                   <Sun className="w-4 h-4" />
                 ) : (
                   <Moon className="w-4 h-4" />
-                )}
+                ))}
               </button>
 
               <Link href="/dashboard">

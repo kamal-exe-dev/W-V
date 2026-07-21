@@ -1,53 +1,12 @@
 'use client'
 
+import { useState, useActionState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Mail, Phone, MoreHorizontal, Briefcase, Clock, Star } from 'lucide-react'
+import { Plus, Mail, Phone, MoreHorizontal, Briefcase, Clock, Star, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-
-const team = [
-  {
-    id: 1, name: 'Aryan Kumar', role: 'Lead Developer', email: 'aryan@webandvisuals.com',
-    phone: '+91 98765 43210', avatar: 'AK', department: 'Engineering',
-    projects: 8, hours: 168, rating: 4.9, status: 'Active',
-    skills: ['Next.js', 'React', 'Node.js', 'PostgreSQL'],
-    color: 'bg-blue-500/20 text-blue-500',
-  },
-  {
-    id: 2, name: 'Aisha Patel', role: 'UI/UX Designer', email: 'aisha@webandvisuals.com',
-    phone: '+91 87654 32109', avatar: 'AP', department: 'Design',
-    projects: 6, hours: 152, rating: 4.8, status: 'Active',
-    skills: ['Figma', 'Framer', 'Prototyping', 'User Research'],
-    color: 'bg-violet-500/20 text-violet-500',
-  },
-  {
-    id: 3, name: 'Vikram Singh', role: 'AI Engineer', email: 'vikram@webandvisuals.com',
-    phone: '+91 76543 21098', avatar: 'VS', department: 'Engineering',
-    projects: 5, hours: 144, rating: 4.7, status: 'Active',
-    skills: ['Python', 'LangChain', 'OpenAI', 'ML Ops'],
-    color: 'bg-emerald-500/20 text-emerald-500',
-  },
-  {
-    id: 4, name: 'Neha Sharma', role: 'Digital Marketer', email: 'neha@webandvisuals.com',
-    phone: '+91 65432 10987', avatar: 'NS', department: 'Marketing',
-    projects: 7, hours: 160, rating: 4.6, status: 'Active',
-    skills: ['SEO', 'Google Ads', 'Analytics', 'Content Strategy'],
-    color: 'bg-amber-500/20 text-amber-500',
-  },
-  {
-    id: 5, name: 'Rohit Saxena', role: 'Backend Developer', email: 'rohit@webandvisuals.com',
-    phone: '+91 54321 09876', avatar: 'RS', department: 'Engineering',
-    projects: 4, hours: 136, rating: 4.5, status: 'On Leave',
-    skills: ['Node.js', 'Golang', 'Docker', 'AWS'],
-    color: 'bg-cyan-500/20 text-cyan-500',
-  },
-  {
-    id: 6, name: 'Priya Rajan', role: 'Project Manager', email: 'priya@webandvisuals.com',
-    phone: '+91 43210 98765', avatar: 'PR', department: 'Management',
-    projects: 12, hours: 176, rating: 4.9, status: 'Active',
-    skills: ['Agile', 'Jira', 'Client Management', 'Reporting'],
-    color: 'bg-pink-500/20 text-pink-500',
-  },
-]
+import { createTeamMember, type CreateTeamMemberState } from '@/lib/actions/team'
+import { getInitials } from '@/lib/format'
+import type { TeamMemberRow } from '@/lib/queries/team'
 
 const deptColors: Record<string, string> = {
   Engineering: 'text-blue-500 bg-blue-500/10',
@@ -56,28 +15,89 @@ const deptColors: Record<string, string> = {
   Management: 'text-pink-500 bg-pink-500/10',
 }
 
-export function TeamContent() {
+const avatarPalette = [
+  'bg-blue-500/20 text-blue-500', 'bg-violet-500/20 text-violet-500',
+  'bg-emerald-500/20 text-emerald-500', 'bg-amber-500/20 text-amber-500',
+  'bg-cyan-500/20 text-cyan-500', 'bg-pink-500/20 text-pink-500',
+]
+
+const initialState: CreateTeamMemberState = {}
+
+function AddMemberModal({ onClose }: { onClose: () => void }) {
+  const [state, formAction, pending] = useActionState(createTeamMember, initialState)
+
+  useEffect(() => {
+    if (state.success) onClose()
+  }, [state.success, onClose])
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="w-full max-w-md bg-card border border-border rounded-3xl p-6 relative"
+      >
+        <button onClick={onClose} className="absolute top-5 right-5 text-muted-foreground hover:text-foreground" aria-label="Close">
+          <X className="w-5 h-5" />
+        </button>
+        <h3 className="text-lg font-bold mb-4">Add Team Member</h3>
+        <form action={formAction} className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <input name="name" required placeholder="Full name" className="px-4 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+            <input name="role" required placeholder="Role" className="px-4 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <input name="email" type="email" required placeholder="Email" className="px-4 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+            <input name="phone" required placeholder="Phone" className="px-4 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+          </div>
+          <select name="department" defaultValue="Engineering" className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
+            <option value="Engineering">Engineering</option>
+            <option value="Design">Design</option>
+            <option value="Marketing">Marketing</option>
+            <option value="Management">Management</option>
+          </select>
+          <input name="skills" placeholder="Skills, comma separated" className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+          {state.error && <p className="text-sm text-destructive">{state.error}</p>}
+          <Button type="submit" className="w-full" disabled={pending}>
+            {pending ? 'Adding…' : 'Add Member'}
+          </Button>
+        </form>
+      </motion.div>
+    </div>
+  )
+}
+
+export function TeamContent({ initialTeam }: { initialTeam: TeamMemberRow[] }) {
+  const [showAdd, setShowAdd] = useState(false)
+
+  const activeCount = initialTeam.filter((t) => t.status === 'Active').length
+  const totalProjects = initialTeam.reduce((a, t) => a + t.projects, 0)
+  const totalHours = initialTeam.reduce((a, t) => a + t.hours, 0)
+  const avgRating = initialTeam.length > 0 ? initialTeam.reduce((a, t) => a + t.rating, 0) / initialTeam.length : 0
+
+  const stats = [
+    { label: 'Total Members', value: String(initialTeam.length), sub: `${activeCount} active` },
+    { label: 'Active Projects', value: String(totalProjects), sub: 'across team' },
+    { label: 'Avg Rating', value: `${avgRating.toFixed(1)}★`, sub: 'this quarter' },
+    { label: 'Hours Logged', value: `${totalHours.toFixed(0)}h`, sub: 'this month' },
+  ]
+
   return (
     <div className="space-y-5 max-w-7xl">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold">Team</h2>
-          <p className="text-sm text-muted-foreground">{team.length} members · {team.filter(t => t.status === 'Active').length} active</p>
+          <p className="text-sm text-muted-foreground">{initialTeam.length} members · {activeCount} active</p>
         </div>
-        <Button size="sm" className="gap-1.5">
+        <Button size="sm" className="gap-1.5" onClick={() => setShowAdd(true)}>
           <Plus className="w-4 h-4" /> Add Member
         </Button>
       </div>
 
       {/* Summary */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: 'Total Members', value: '6', sub: '5 active' },
-          { label: 'Active Projects', value: '24', sub: 'across team' },
-          { label: 'Avg Rating', value: '4.7★', sub: 'this quarter' },
-          { label: 'Hours Logged', value: '936h', sub: 'this month' },
-        ].map((stat, i) => (
+        {stats.map((stat, i) => (
           <motion.div
             key={stat.label}
             initial={{ opacity: 0, y: 12 }}
@@ -94,7 +114,7 @@ export function TeamContent() {
 
       {/* Team grid */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {team.map((member, i) => (
+        {initialTeam.map((member, i) => (
           <motion.div
             key={member.id}
             initial={{ opacity: 0, y: 16 }}
@@ -104,8 +124,8 @@ export function TeamContent() {
           >
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-sm font-bold shrink-0 ${member.color}`}>
-                  {member.avatar}
+                <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-sm font-bold shrink-0 ${avatarPalette[i % avatarPalette.length]}`}>
+                  {getInitials(member.name)}
                 </div>
                 <div>
                   <p className="font-semibold text-sm">{member.name}</p>
@@ -130,7 +150,7 @@ export function TeamContent() {
               </span>
               <div className="flex items-center gap-1 text-xs text-amber-400">
                 <Star className="w-3 h-3 fill-amber-400" />
-                <span className="font-semibold text-foreground">{member.rating}</span>
+                <span className="font-semibold text-foreground">{member.rating.toFixed(1)}</span>
               </div>
             </div>
 
@@ -141,7 +161,7 @@ export function TeamContent() {
               </div>
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Clock className="w-3 h-3" />
-                <span>{member.hours}h / mo</span>
+                <span>{member.hours.toFixed(0)}h / mo</span>
               </div>
             </div>
 
@@ -164,6 +184,8 @@ export function TeamContent() {
           </motion.div>
         ))}
       </div>
+
+      {showAdd && <AddMemberModal onClose={() => setShowAdd(false)} />}
     </div>
   )
 }

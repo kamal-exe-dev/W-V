@@ -1,27 +1,39 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useActionState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useTheme } from 'next-themes'
 import { Sun, Moon, Bell, Shield, Globe, CreditCard, Save } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { updateProfile, updateAgency, type SaveState } from '@/lib/actions/settings'
+import type { AdminProfile, AgencyProfile } from '@prisma/client'
 
 const tabs = ['Profile', 'Notifications', 'Security', 'Billing', 'Agency']
+const initialState: SaveState = {}
 
-export function SettingsContent() {
+export function SettingsContent({ profile, agency }: { profile: AdminProfile; agency: AgencyProfile }) {
   const [activeTab, setActiveTab] = useState('Profile')
   const { theme, setTheme } = useTheme()
-  const [profile, setProfile] = useState({
-    name: 'Admin User', email: 'admin@webandvisuals.com',
-    phone: '+91 98765 43210', role: 'Agency Owner',
-    bio: 'Founder and CEO of Web & Visuals. Building digital experiences powered by design and AI.',
-  })
-  const [saved, setSaved] = useState(false)
+  const [profileState, profileAction, profilePending] = useActionState(updateProfile, initialState)
+  const [agencyState, agencyAction, agencyPending] = useActionState(updateAgency, initialState)
+  const [profileSaved, setProfileSaved] = useState(false)
+  const [agencySaved, setAgencySaved] = useState(false)
 
-  const handleSave = () => {
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
-  }
+  useEffect(() => {
+    if (profileState.success) {
+      setProfileSaved(true)
+      const t = setTimeout(() => setProfileSaved(false), 2000)
+      return () => clearTimeout(t)
+    }
+  }, [profileState.success])
+
+  useEffect(() => {
+    if (agencyState.success) {
+      setAgencySaved(true)
+      const t = setTimeout(() => setAgencySaved(false), 2000)
+      return () => clearTimeout(t)
+    }
+  }, [agencyState.success])
 
   return (
     <div className="space-y-5 max-w-4xl">
@@ -51,47 +63,42 @@ export function SettingsContent() {
         className="bg-card border border-border rounded-2xl p-6"
       >
         {activeTab === 'Profile' && (
-          <div className="space-y-5">
+          <form action={profileAction} className="space-y-5">
             <h3 className="font-semibold text-base">Profile Information</h3>
 
             {/* Avatar */}
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-2xl bg-primary/20 flex items-center justify-center text-2xl font-bold text-primary">
-                A
+                {profile.name[0]?.toUpperCase()}
               </div>
               <div>
-                <Button variant="outline" size="sm">Change Photo</Button>
+                <Button type="button" variant="outline" size="sm">Change Photo</Button>
                 <p className="text-xs text-muted-foreground mt-1">PNG, JPG up to 2MB</p>
               </div>
             </div>
 
             <div className="grid sm:grid-cols-2 gap-4">
-              {[
-                { key: 'name', label: 'Full Name', type: 'text' },
-                { key: 'email', label: 'Email Address', type: 'email' },
-                { key: 'phone', label: 'Phone Number', type: 'tel' },
-                { key: 'role', label: 'Role', type: 'text' },
-              ].map((field) => (
-                <div key={field.key}>
-                  <label className="block text-sm font-medium mb-1.5">{field.label}</label>
-                  <input
-                    type={field.type}
-                    value={profile[field.key as keyof typeof profile]}
-                    onChange={(e) => setProfile({ ...profile, [field.key]: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                  />
-                </div>
-              ))}
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Full Name</label>
+                <input name="name" defaultValue={profile.name} className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Email Address</label>
+                <input name="email" type="email" defaultValue={profile.email} className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Phone Number</label>
+                <input name="phone" defaultValue={profile.phone} className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Role</label>
+                <input name="role" defaultValue={profile.role} className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors" />
+              </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium mb-1.5">Bio</label>
-              <textarea
-                rows={3}
-                value={profile.bio}
-                onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-                className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors resize-none"
-              />
+              <textarea name="bio" rows={3} defaultValue={profile.bio} className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors resize-none" />
             </div>
 
             <div>
@@ -104,6 +111,7 @@ export function SettingsContent() {
                 ].map((opt) => (
                   <button
                     key={opt.value}
+                    type="button"
                     onClick={() => setTheme(opt.value)}
                     className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm transition-colors ${
                       theme === opt.value ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:text-foreground'
@@ -116,13 +124,15 @@ export function SettingsContent() {
               </div>
             </div>
 
+            {profileState.error && <p className="text-sm text-destructive">{profileState.error}</p>}
+
             <div className="flex justify-end">
-              <Button onClick={handleSave} className="gap-2">
+              <Button type="submit" className="gap-2" disabled={profilePending}>
                 <Save className="w-4 h-4" />
-                {saved ? 'Saved!' : 'Save Changes'}
+                {profilePending ? 'Saving…' : profileSaved ? 'Saved!' : 'Save Changes'}
               </Button>
             </div>
-          </div>
+          </form>
         )}
 
         {activeTab === 'Notifications' && (
@@ -169,7 +179,10 @@ export function SettingsContent() {
                 <label className="block text-sm font-medium mb-1.5">Confirm New Password</label>
                 <input type="password" placeholder="Confirm password" className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors" />
               </div>
-              <Button className="gap-2">
+              <p className="text-xs text-muted-foreground">
+                Password changes require an authentication system, which isn&apos;t wired up yet — this is a future phase.
+              </p>
+              <Button disabled className="gap-2">
                 <Shield className="w-4 h-4" /> Update Password
               </Button>
             </div>
@@ -185,9 +198,9 @@ export function SettingsContent() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-bold text-primary">Agency Pro Plan</p>
-                  <p className="text-sm text-muted-foreground">₹4,999 / month · Renews Aug 1, 2025</p>
+                  <p className="text-sm text-muted-foreground">₹4,999 / month</p>
                 </div>
-                <Button variant="outline" size="sm">Manage Plan</Button>
+                <Button variant="outline" size="sm" disabled>Manage Plan</Button>
               </div>
               <div className="mt-4 grid grid-cols-3 gap-3 text-center text-sm">
                 <div><p className="font-bold text-foreground">Unlimited</p><p className="text-xs text-muted-foreground">Projects</p></div>
@@ -195,48 +208,42 @@ export function SettingsContent() {
                 <div><p className="font-bold text-foreground">Priority</p><p className="text-xs text-muted-foreground">Support</p></div>
               </div>
             </div>
-            <div className="bg-card border border-border rounded-2xl p-5">
-              <p className="font-medium mb-3">Payment Method</p>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-7 bg-muted rounded-lg flex items-center justify-center">
-                  <CreditCard className="w-4 h-4 text-muted-foreground" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Visa ending in 4242</p>
-                  <p className="text-xs text-muted-foreground">Expires 08/2027</p>
-                </div>
-                <Button variant="outline" size="sm" className="ml-auto">Update</Button>
-              </div>
-            </div>
+            <p className="text-xs text-muted-foreground">
+              Payment processing (Stripe/Razorpay) isn&apos;t connected yet — this section is illustrative until that integration is added.
+            </p>
           </div>
         )}
 
         {activeTab === 'Agency' && (
-          <div className="space-y-5">
+          <form action={agencyAction} className="space-y-5">
             <h3 className="font-semibold text-base flex items-center gap-2">
               <Globe className="w-4 h-4" /> Agency Settings
             </h3>
             <div className="grid sm:grid-cols-2 gap-4">
-              {[
-                { label: 'Agency Name', value: 'Web & Visuals' },
-                { label: 'Website', value: 'webandvisuals.com' },
-                { label: 'GST Number', value: '29XXXXX1234X1ZX' },
-                { label: 'City', value: 'Bengaluru, India' },
-              ].map((field) => (
-                <div key={field.label}>
-                  <label className="block text-sm font-medium mb-1.5">{field.label}</label>
-                  <input
-                    type="text"
-                    defaultValue={field.value}
-                    className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                  />
-                </div>
-              ))}
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Agency Name</label>
+                <input name="name" defaultValue={agency.name} className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Website</label>
+                <input name="website" defaultValue={agency.website} className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">GST Number</label>
+                <input name="gstNumber" defaultValue={agency.gstNumber} className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">City</label>
+                <input name="city" defaultValue={agency.city} className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors" />
+              </div>
             </div>
+            {agencyState.error && <p className="text-sm text-destructive">{agencyState.error}</p>}
             <div className="flex justify-end">
-              <Button className="gap-2"><Save className="w-4 h-4" /> Save Changes</Button>
+              <Button type="submit" className="gap-2" disabled={agencyPending}>
+                <Save className="w-4 h-4" /> {agencyPending ? 'Saving…' : agencySaved ? 'Saved!' : 'Save Changes'}
+              </Button>
             </div>
-          </div>
+          </form>
         )}
       </motion.div>
     </div>

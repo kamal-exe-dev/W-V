@@ -3,82 +3,59 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Send, Search, MoreHorizontal, Phone, Video, Paperclip } from 'lucide-react'
+import { sendMessage } from '@/lib/actions/messages'
+import type { ConversationRow } from '@/lib/queries/messages'
 
-const contacts = [
-  { id: 1, name: 'Rahul Gupta', company: 'Nexus Ventures', avatar: 'RG', unread: 2, lastMsg: 'Can you share the latest design mockups?', time: '2m', online: true },
-  { id: 2, name: 'Sanjay Mehta', company: 'Capital Corp', avatar: 'SM', unread: 1, lastMsg: 'Invoice looks great, approving now.', time: '15m', online: true },
-  { id: 3, name: 'Priya Singh', company: 'TechFlow Inc', avatar: 'PS', unread: 0, lastMsg: 'The chatbot is working perfectly!', time: '1h', online: false },
-  { id: 4, name: 'Ananya Krishnan', company: 'Bloom Studio', avatar: 'AK', unread: 0, lastMsg: 'Love the brand colors!', time: '3h', online: false },
-  { id: 5, name: 'Karan Patel', company: 'AppWave', avatar: 'KP', unread: 0, lastMsg: 'When do we start the redesign?', time: '1d', online: false },
+const avatarColors = [
+  'bg-blue-500/20 text-blue-500', 'bg-violet-500/20 text-violet-500',
+  'bg-emerald-500/20 text-emerald-500', 'bg-pink-500/20 text-pink-500',
+  'bg-amber-500/20 text-amber-500',
 ]
 
-type Message = {
-  id: number
-  text: string
-  sender: 'me' | 'them'
-  time: string
-}
-
-const conversationMap: Record<number, Message[]> = {
-  1: [
-    { id: 1, text: 'Hi! Hope you\'re doing well. Just checking in on the e-commerce project.', sender: 'them', time: '10:14 AM' },
-    { id: 2, text: 'All good! We\'re at 72% completion. The payment gateway integration is done.', sender: 'me', time: '10:16 AM' },
-    { id: 3, text: 'Amazing. Can you share the latest design mockups?', sender: 'them', time: '10:18 AM' },
-    { id: 4, text: 'Sure, I\'ll send them over by 2 PM today.', sender: 'me', time: '10:20 AM' },
-  ],
-  2: [
-    { id: 1, text: 'Invoice INV-2025-086 received. ₹1,20,000.', sender: 'them', time: '9:00 AM' },
-    { id: 2, text: 'Yes, that\'s for the FinanceAI Dashboard milestone 2.', sender: 'me', time: '9:05 AM' },
-    { id: 3, text: 'Invoice looks great, approving now.', sender: 'them', time: '9:10 AM' },
-  ],
-  3: [
-    { id: 1, text: 'The chatbot is live! It handled 50 queries today already.', sender: 'them', time: 'Yesterday' },
-    { id: 2, text: 'That\'s incredible! Let us know if you need any adjustments.', sender: 'me', time: 'Yesterday' },
-    { id: 3, text: 'The chatbot is working perfectly!', sender: 'them', time: 'Yesterday' },
-  ],
-}
-
-const avatarColors: Record<number, string> = {
-  1: 'bg-blue-500/20 text-blue-500',
-  2: 'bg-violet-500/20 text-violet-500',
-  3: 'bg-emerald-500/20 text-emerald-500',
-  4: 'bg-pink-500/20 text-pink-500',
-  5: 'bg-amber-500/20 text-amber-500',
-}
-
-export function MessagesContent() {
-  const [activeId, setActiveId] = useState(1)
+export function MessagesContent({ initialConversations }: { initialConversations: ConversationRow[] }) {
+  const [conversations, setConversations] = useState(initialConversations)
+  const [activeId, setActiveId] = useState(conversations[0]?.id ?? '')
   const [input, setInput] = useState('')
-  const [messages, setMessages] = useState<Record<number, Message[]>>(conversationMap)
   const [search, setSearch] = useState('')
   const endRef = useRef<HTMLDivElement>(null)
 
-  const activeContact = contacts.find((c) => c.id === activeId)!
-  const conversation = messages[activeId] ?? []
+  const activeContact = conversations.find((c) => c.id === activeId)
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [conversation.length])
+  }, [activeContact?.messages.length])
 
   const handleSend = () => {
-    if (!input.trim()) return
-    const newMsg: Message = {
-      id: Date.now(),
-      text: input.trim(),
-      sender: 'me',
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    if (!input.trim() || !activeContact) return
+    const text = input.trim()
+    const optimisticMsg = {
+      id: `temp-${Date.now()}`,
+      text,
+      sender: 'me' as const,
+      time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
     }
-    setMessages((prev) => ({ ...prev, [activeId]: [...(prev[activeId] ?? []), newMsg] }))
+    setConversations((prev) =>
+      prev.map((c) => (c.id === activeId ? { ...c, messages: [...c.messages, optimisticMsg], lastMsg: text } : c))
+    )
     setInput('')
+    sendMessage(activeId, text).catch(() => {})
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229) handleSend()
+    if (e.key === 'Enter' && !e.nativeEvent.isComposing) handleSend()
   }
 
-  const filteredContacts = contacts.filter(
+  const filteredContacts = conversations.filter(
     (c) => c.name.toLowerCase().includes(search.toLowerCase()) || c.company.toLowerCase().includes(search.toLowerCase())
   )
+
+  if (!activeContact) {
+    return (
+      <div className="flex h-[calc(100vh-8rem)] max-w-7xl items-center justify-center bg-card border border-border rounded-2xl">
+        <p className="text-sm text-muted-foreground">No conversations yet.</p>
+      </div>
+    )
+  }
 
   return (
     <div className="flex h-[calc(100vh-8rem)] max-w-7xl bg-card border border-border rounded-2xl overflow-hidden">
@@ -99,7 +76,7 @@ export function MessagesContent() {
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {filteredContacts.map((contact) => (
+          {filteredContacts.map((contact, i) => (
             <button
               key={contact.id}
               onClick={() => setActiveId(contact.id)}
@@ -108,12 +85,9 @@ export function MessagesContent() {
               }`}
             >
               <div className="relative shrink-0">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold ${avatarColors[contact.id]}`}>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold ${avatarColors[i % avatarColors.length]}`}>
                   {contact.avatar}
                 </div>
-                {contact.online && (
-                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-card rounded-full" />
-                )}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
@@ -137,7 +111,7 @@ export function MessagesContent() {
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-3">
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold ${avatarColors[activeId]}`}>
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold ${avatarColors[conversations.findIndex(c => c.id === activeId) % avatarColors.length]}`}>
               {activeContact.avatar}
             </div>
             <div>
@@ -160,7 +134,7 @@ export function MessagesContent() {
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {conversation.map((msg) => (
+          {activeContact.messages.map((msg) => (
             <motion.div
               key={msg.id}
               initial={{ opacity: 0, y: 8 }}
@@ -179,6 +153,9 @@ export function MessagesContent() {
               </div>
             </motion.div>
           ))}
+          {activeContact.messages.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-8">No messages yet — say hello!</p>
+          )}
           <div ref={endRef} />
         </div>
 

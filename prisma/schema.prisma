@@ -1,15 +1,9 @@
-// Local dev runs on SQLite (zero-install). To deploy against your VPS Postgres:
-//   1. change `provider = "sqlite"` below to `provider = "postgresql"`
-//   2. set DATABASE_URL in .env to your Postgres connection string
-//   3. run `npm run db:migrate` again to generate fresh Postgres migrations
-// No fields here use SQLite/Postgres-only features, so the switch is a two-line change.
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

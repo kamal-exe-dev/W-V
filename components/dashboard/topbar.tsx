@@ -1,6 +1,7 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { Bell, Sun, Moon, ChevronDown } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { CommandPalette } from '@/components/command-palette'
@@ -24,6 +25,9 @@ const pageTitles: Record<string, string> = {
 export function DashboardTopbar() {
   const pathname = usePathname()
   const { theme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => setMounted(true), [])
 
   const title = pageTitles[pathname] ?? 'Dashboard'
 
@@ -52,7 +56,7 @@ export function DashboardTopbar() {
           className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
           aria-label="Toggle theme"
         >
-          {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          {mounted && (theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />)}
         </button>
 
         {/* User */}

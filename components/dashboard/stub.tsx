@@ -51,8 +51,8 @@ export function DashboardStub({ title, description, items = [] }: DashboardStubP
         <div>
           <p className="font-semibold text-foreground">{title} Module</p>
           <p className="text-sm text-muted-foreground mt-1 max-w-xs">
-            Full {title.toLowerCase()} functionality is available in the complete build.
-            Connect a database to enable all features.
+            The stats above are live from your database. Campaign builder, email
+            sequences, and richer automation tools are on the roadmap.
           </p>
         </div>
         <button className="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">

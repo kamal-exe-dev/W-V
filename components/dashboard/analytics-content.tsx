@@ -1,50 +1,27 @@
 'use client'
 
-import { motion } from 'framer-motion'
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
 import { TrendingUp, Users, MousePointerClick, Eye } from 'lucide-react'
-import { useState } from 'react'
+import { motion } from 'framer-motion'
+import type { getAnalyticsData } from '@/lib/queries/analytics'
 
-const periods = ['7d', '30d', '90d', '1y']
+type AnalyticsData = Awaited<ReturnType<typeof getAnalyticsData>>
 
-const trafficData = [
-  { date: 'Jul 1', sessions: 420, pageviews: 1280, leads: 18 },
-  { date: 'Jul 5', sessions: 510, pageviews: 1540, leads: 22 },
-  { date: 'Jul 10', sessions: 390, pageviews: 1180, leads: 15 },
-  { date: 'Jul 15', sessions: 640, pageviews: 1920, leads: 31 },
-  { date: 'Jul 18', sessions: 720, pageviews: 2160, leads: 38 },
-  { date: 'Jul 20', sessions: 580, pageviews: 1740, leads: 26 },
-  { date: 'Jul 21', sessions: 810, pageviews: 2430, leads: 44 },
-]
+const sourceColors = ['#2563EB', '#7c3aed', '#059669', '#d97706', '#dc2626']
 
-const sourceData = [
-  { name: 'Organic Search', value: 38, color: '#2563EB' },
-  { name: 'Direct', value: 24, color: '#7c3aed' },
-  { name: 'Social Media', value: 18, color: '#059669' },
-  { name: 'Referral', value: 12, color: '#d97706' },
-  { name: 'Email', value: 8, color: '#dc2626' },
-]
+export function AnalyticsContent({ data }: { data: AnalyticsData }) {
+  const { stats, trafficTrend, sources, topPages, conversionTrend } = data
+  const sourceData = sources.map((s, i) => ({ ...s, color: sourceColors[i % sourceColors.length]! }))
 
-const topPages = [
-  { page: '/', views: 4820, bounce: '38%', time: '2:14' },
-  { page: '/services/web-development', views: 2140, bounce: '42%', time: '3:02' },
-  { page: '/pricing', views: 1860, bounce: '31%', time: '2:47' },
-  { page: '/about', views: 1340, bounce: '55%', time: '1:38' },
-  { page: '/blog/future-of-ai-agents-2025', views: 1120, bounce: '28%', time: '4:15' },
-  { page: '/contact', views: 980, bounce: '22%', time: '1:52' },
-]
-
-const conversionData = [
-  { month: 'Jan', rate: 2.1 }, { month: 'Feb', rate: 2.4 }, { month: 'Mar', rate: 2.8 },
-  { month: 'Apr', rate: 3.2 }, { month: 'May', rate: 2.9 }, { month: 'Jun', rate: 3.6 },
-  { month: 'Jul', rate: 4.1 },
-]
-
-export function AnalyticsContent() {
-  const [period, setPeriod] = useState('30d')
+  const statCards = [
+    { label: 'Total Sessions (30d)', value: stats.totalSessions.toLocaleString(), icon: Eye, color: 'bg-primary/10 text-primary' },
+    { label: 'Total Pageviews (30d)', value: stats.totalPageviews.toLocaleString(), icon: Users, color: 'bg-violet-500/10 text-violet-500' },
+    { label: 'Total Leads (30d)', value: stats.totalLeads.toLocaleString(), icon: MousePointerClick, color: 'bg-emerald-500/10 text-emerald-500' },
+    { label: 'Conversion Rate', value: `${stats.conversionRate.toFixed(1)}%`, icon: TrendingUp, color: 'bg-amber-500/10 text-amber-500' },
+  ]
 
   return (
     <div className="space-y-6 max-w-7xl">
@@ -54,29 +31,14 @@ export function AnalyticsContent() {
           <h2 className="text-xl font-bold">Website Analytics</h2>
           <p className="text-sm text-muted-foreground">Track your website performance and leads</p>
         </div>
-        <div className="flex bg-card border border-border rounded-xl p-1 gap-1">
-          {periods.map((p) => (
-            <button
-              key={p}
-              onClick={() => setPeriod(p)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                period === p ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {p}
-            </button>
-          ))}
-        </div>
+        <span className="px-3 py-1.5 rounded-lg text-xs font-medium bg-card border border-border text-muted-foreground">
+          Last 30 days
+        </span>
       </div>
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: 'Total Sessions', value: '12,840', change: '+18%', icon: Eye, color: 'bg-primary/10 text-primary' },
-          { label: 'Unique Visitors', value: '9,420', change: '+12%', icon: Users, color: 'bg-violet-500/10 text-violet-500' },
-          { label: 'Total Leads', value: '284', change: '+24%', icon: MousePointerClick, color: 'bg-emerald-500/10 text-emerald-500' },
-          { label: 'Conversion Rate', value: '4.1%', change: '+0.5%', icon: TrendingUp, color: 'bg-amber-500/10 text-amber-500' },
-        ].map((stat, i) => (
+        {statCards.map((stat, i) => (
           <motion.div
             key={stat.label}
             initial={{ opacity: 0, y: 16 }}
@@ -91,7 +53,6 @@ export function AnalyticsContent() {
               </div>
             </div>
             <p className="text-2xl font-bold">{stat.value}</p>
-            <p className="text-xs text-emerald-500 font-medium mt-1">{stat.change} vs prev period</p>
           </motion.div>
         ))}
       </div>
@@ -107,7 +68,7 @@ export function AnalyticsContent() {
         >
           <h3 className="font-semibold mb-4">Traffic & Leads</h3>
           <ResponsiveContainer width="100%" height={220}>
-            <LineChart data={trafficData}>
+            <LineChart data={trafficTrend}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
@@ -192,20 +153,16 @@ export function AnalyticsContent() {
           className="bg-card border border-border rounded-2xl p-5"
         >
           <h3 className="font-semibold mb-1">Conversion Rate</h3>
-          <p className="text-xs text-muted-foreground mb-4">Visitors to leads trend</p>
+          <p className="text-xs text-muted-foreground mb-4">Visitors to leads, by week</p>
           <ResponsiveContainer width="100%" height={160}>
-            <BarChart data={conversionData}>
+            <BarChart data={conversionTrend}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-              <XAxis dataKey="month" tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
+              <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} />
               <Tooltip contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', fontSize: '12px' }} />
               <Bar dataKey="rate" fill="#2563EB" radius={[4, 4, 0, 0]} name="Conv. Rate %" />
             </BarChart>
           </ResponsiveContainer>
-          <div className="mt-3 p-3 bg-primary/5 border border-primary/10 rounded-xl">
-            <p className="text-xs font-semibold text-primary">+95% improvement</p>
-            <p className="text-xs text-muted-foreground">Since January 2025</p>
-          </div>
         </motion.div>
       </div>
     </div>
