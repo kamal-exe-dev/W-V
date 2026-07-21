@@ -1,0 +1,214 @@
+// Local dev runs on SQLite (zero-install). To deploy against your VPS Postgres:
+//   1. change `provider = "sqlite"` below to `provider = "postgresql"`
+//   2. set DATABASE_URL in .env to your Postgres connection string
+//   3. run `npm run db:migrate` again to generate fresh Postgres migrations
+// No fields here use SQLite/Postgres-only features, so the switch is a two-line change.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Client {
+  id          String   @id @default(cuid())
+  name        String
+  contactName String
+  email       String
+  phone       String
+  website     String?
+  industry    String?
+  status      String   @default("Active") // Active | Inactive
+  rating      Int      @default(5)
+  createdAt   DateTime @default(now())
+
+  projects      Project[]
+  invoices      Invoice[]
+  transactions  Transaction[]
+  proposals     Proposal[]
+  conversation  Conversation?
+}
+
+model TeamMember {
+  id         String   @id @default(cuid())
+  name       String
+  role       String
+  email      String
+  phone      String
+  department String   // Engineering | Design | Marketing | Management
+  status     String   @default("Active") // Active | On Leave
+  rating     Float    @default(4.5)
+  skills     Json     // string[]
+  createdAt  DateTime @default(now())
+
+  assignments ProjectAssignment[]
+  timeEntries TimeEntry[]
+}
+
+model Project {
+  id        String   @id @default(cuid())
+  name      String
+  clientId  String
+  service   String
+  status    String   @default("Planning") // Planning | In Progress | Review | Completed
+  progress  Int      @default(0)
+  priority  String   @default("Medium") // Low | Medium | High
+  value     Int      // whole rupees
+  dueDate   DateTime
+  createdAt DateTime @default(now())
+
+  client      Client               @relation(fields: [clientId], references: [id])
+  assignments ProjectAssignment[]
+  invoices    Invoice[]
+  timeEntries TimeEntry[]
+}
+
+model ProjectAssignment {
+  id           String @id @default(cuid())
+  projectId    String
+  teamMemberId String
+
+  project    Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  teamMember TeamMember @relation(fields: [teamMemberId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, teamMemberId])
+}
+
+model Invoice {
+  id        String   @id @default(cuid())
+  number    String   @unique
+  clientId  String
+  projectId String?
+  amount    Int
+  status    String   @default("Draft") // Draft | Sent | Paid | Overdue
+  issueDate DateTime @default(now())
+  dueDate   DateTime
+  createdAt DateTime @default(now())
+
+  client  Client   @relation(fields: [clientId], references: [id])
+  project Project? @relation(fields: [projectId], references: [id])
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  description String
+  amount      Int
+  type        String   // income | expense
+  category    String   // Client Payment | Salaries | Software & Tools | Marketing | Infrastructure | Office & Admin | Misc
+  clientId    String?
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  client Client? @relation(fields: [clientId], references: [id])
+}
+
+model TimeEntry {
+  id           String   @id @default(cuid())
+  projectId    String
+  teamMemberId String
+  task         String
+  date         DateTime @default(now())
+  hours        Float
+  billable     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  project    Project    @relation(fields: [projectId], references: [id])
+  teamMember TeamMember @relation(fields: [teamMemberId], references: [id])
+}
+
+model Conversation {
+  id        String   @id @default(cuid())
+  clientId  String   @unique
+  updatedAt DateTime @updatedAt
+
+  client   Client    @relation(fields: [clientId], references: [id])
+  messages Message[]
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  sender         String   // me | them
+  text           String
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+}
+
+model Proposal {
+  id        String   @id @default(cuid())
+  title     String
+  clientId  String
+  value     Int
+  status    String   @default("Draft") // Draft | Sent | Accepted | Rejected
+  createdAt DateTime @default(now())
+
+  client Client @relation(fields: [clientId], references: [id])
+}
+
+model Campaign {
+  id        String   @id @default(cuid())
+  name      String
+  channel   String   // Email | Social | Search | Ads
+  status    String   @default("Active") // Active | Paused | Completed
+  spend     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  leads Lead[]
+}
+
+model Lead {
+  id         String   @id @default(cuid())
+  name       String
+  email      String
+  source     String
+  campaignId String?
+  createdAt  DateTime @default(now())
+
+  campaign Campaign? @relation(fields: [campaignId], references: [id])
+}
+
+model AnalyticsSnapshot {
+  id        String   @id @default(cuid())
+  date      DateTime @unique
+  sessions  Int
+  pageviews Int
+  leads     Int
+  createdAt DateTime @default(now())
+}
+
+model TrafficSource {
+  id      String @id @default(cuid())
+  name    String @unique
+  percent Int
+}
+
+model TopPageStat {
+  id             String @id @default(cuid())
+  path           String @unique
+  views          Int
+  bounceRate     Int // percent
+  avgTimeSeconds Int
+}
+
+model AgencyProfile {
+  id        String   @id @default("singleton")
+  name      String   @default("Web & Visuals")
+  website   String   @default("webandvisuals.com")
+  gstNumber String   @default("")
+  city      String   @default("Bengaluru, India")
+  updatedAt DateTime @updatedAt
+}
+
+model AdminProfile {
+  id        String   @id @default("singleton")
+  name      String   @default("Admin User")
+  email     String   @default("admin@webandvisuals.com")
+  phone     String   @default("+91 98765 43210")
+  role      String   @default("Agency Owner")
+  bio       String   @default("")
+  updatedAt DateTime @updatedAt
+}
