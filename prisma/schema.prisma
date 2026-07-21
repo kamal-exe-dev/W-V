@@ -24,6 +24,8 @@ model Client {
   transactions  Transaction[]
   proposals     Proposal[]
   conversation  Conversation?
+  supportTickets SupportTicket[]
+  deliverables  Deliverable[]
 }
 
 model TeamMember {
@@ -54,10 +56,11 @@ model Project {
   dueDate   DateTime
   createdAt DateTime @default(now())
 
-  client      Client               @relation(fields: [clientId], references: [id])
-  assignments ProjectAssignment[]
-  invoices    Invoice[]
-  timeEntries TimeEntry[]
+  client       Client               @relation(fields: [clientId], references: [id])
+  assignments  ProjectAssignment[]
+  invoices     Invoice[]
+  timeEntries  TimeEntry[]
+  deliverables Deliverable[]
 }
 
 model ProjectAssignment {
@@ -159,10 +162,41 @@ model Lead {
   name       String
   email      String
   source     String
+  phone      String?
+  company    String?
+  service    String?
+  budget     String?
+  message    String?
   campaignId String?
   createdAt  DateTime @default(now())
 
   campaign Campaign? @relation(fields: [campaignId], references: [id])
+}
+
+model SupportTicket {
+  id          String   @id @default(cuid())
+  clientId    String
+  subject     String
+  description String
+  status      String   @default("Open") // Open | In Progress | Resolved
+  priority    String   @default("Medium") // Low | Medium | High
+  createdAt   DateTime @default(now())
+
+  client Client @relation(fields: [clientId], references: [id])
+}
+
+model Deliverable {
+  id        String   @id @default(cuid())
+  clientId  String
+  projectId String?
+  name      String
+  url       String
+  fileType  String   @default("file") // pdf | figma | zip | video | image | file
+  sizeLabel String?
+  createdAt DateTime @default(now())
+
+  client  Client   @relation(fields: [clientId], references: [id])
+  project Project? @relation(fields: [projectId], references: [id])
 }
 
 model AnalyticsSnapshot {

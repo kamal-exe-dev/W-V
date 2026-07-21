@@ -4,35 +4,11 @@ import { motion } from 'framer-motion'
 import {
   FolderKanban, FileText, MessageSquare, DollarSign,
   CheckCircle, Clock, AlertCircle, Circle, ArrowUpRight,
-  Download, ExternalLink,
 } from 'lucide-react'
 import Link from 'next/link'
+import type { getPortalOverview } from '@/lib/queries/portal'
 
-const stats = [
-  { label: 'Active Projects', value: '4', icon: FolderKanban, color: 'bg-primary/10 text-primary' },
-  { label: 'Pending Invoices', value: '2', icon: FileText, color: 'bg-amber-500/10 text-amber-500' },
-  { label: 'Unread Messages', value: '5', icon: MessageSquare, color: 'bg-violet-500/10 text-violet-500' },
-  { label: 'Total Spent', value: '₹4,80,000', icon: DollarSign, color: 'bg-emerald-500/10 text-emerald-500' },
-]
-
-const projects = [
-  { name: 'Nexus E-Commerce Platform', status: 'In Progress', progress: 72, due: 'Aug 15, 2025', manager: 'Arjun S.' },
-  { name: 'Brand Identity Refresh', status: 'Review', progress: 90, due: 'Jul 28, 2025', manager: 'Priya M.' },
-  { name: 'Mobile App Design', status: 'In Progress', progress: 45, due: 'Sep 1, 2025', manager: 'Rahul K.' },
-  { name: 'SEO Campaign Q3', status: 'Planning', progress: 10, due: 'Oct 1, 2025', manager: 'Sneha L.' },
-]
-
-const invoices = [
-  { id: 'INV-2025-042', amount: '₹1,20,000', status: 'Due', dueDate: 'Jul 31, 2025' },
-  { id: 'INV-2025-038', amount: '₹85,000', status: 'Paid', dueDate: 'Jul 10, 2025' },
-  { id: 'INV-2025-031', amount: '₹2,40,000', status: 'Paid', dueDate: 'Jun 15, 2025' },
-]
-
-const messages = [
-  { from: 'Arjun S.', subject: 'E-commerce milestone update ready for review', time: '2h ago', unread: true },
-  { from: 'Priya M.', subject: 'Brand logo final options attached', time: '5h ago', unread: true },
-  { from: 'Support', subject: 'Your invoice INV-2025-042 is due soon', time: '1d ago', unread: false },
-]
+type OverviewData = Awaited<ReturnType<typeof getPortalOverview>>
 
 const statusConfig: Record<string, { color: string; icon: React.ElementType }> = {
   'In Progress': { color: 'text-blue-500 bg-blue-500/10', icon: Circle },
@@ -47,12 +23,19 @@ const invoiceStatus: Record<string, string> = {
   'Overdue': 'text-red-500 bg-red-500/10',
 }
 
-export function PortalOverview() {
+export function PortalOverview({ data, clientName }: { data: OverviewData; clientName: string }) {
+  const stats = [
+    { label: 'Active Projects', value: String(data.stats.activeProjects), icon: FolderKanban, color: 'bg-primary/10 text-primary' },
+    { label: 'Pending Invoices', value: String(data.stats.pendingInvoices), icon: FileText, color: 'bg-amber-500/10 text-amber-500' },
+    { label: 'Unread Messages', value: String(data.stats.unreadMessages), icon: MessageSquare, color: 'bg-violet-500/10 text-violet-500' },
+    { label: 'Total Spent', value: data.stats.totalSpent, icon: DollarSign, color: 'bg-emerald-500/10 text-emerald-500' },
+  ]
+
   return (
     <div className="space-y-6 max-w-5xl">
       {/* Welcome */}
       <div>
-        <h2 className="text-xl font-bold">Welcome back, Nexus Ventures</h2>
+        <h2 className="text-xl font-bold">Welcome back, {clientName}</h2>
         <p className="text-sm text-muted-foreground">Here is a summary of your ongoing work with Web & Visuals.</p>
       </div>
 
@@ -85,14 +68,14 @@ export function PortalOverview() {
         className="bg-card border border-border rounded-2xl p-5"
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold">Active Projects</h3>
+          <h3 className="font-semibold">Your Projects</h3>
           <Link href="/portal/projects" className="text-xs text-primary hover:underline flex items-center gap-1">
             View all <ArrowUpRight className="w-3 h-3" />
           </Link>
         </div>
         <div className="space-y-4">
-          {projects.map((project) => {
-            const { color, icon: StatusIcon } = statusConfig[project.status] ?? statusConfig['Planning']
+          {data.projects.map((project) => {
+            const { color, icon: StatusIcon } = statusConfig[project.status] ?? statusConfig['Planning']!
             return (
               <div key={project.name} className="flex items-start gap-4">
                 <div className="flex-1 min-w-0">
@@ -112,13 +95,14 @@ export function PortalOverview() {
                     </div>
                     <span className="text-xs text-muted-foreground shrink-0">{project.progress}%</span>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Manager: {project.manager} &middot; Due {project.due}
-                  </p>
+                  <p className="text-xs text-muted-foreground">Due {project.due}</p>
                 </div>
               </div>
             )
           })}
+          {data.projects.length === 0 && (
+            <p className="text-sm text-muted-foreground py-4">No projects yet.</p>
+          )}
         </div>
       </motion.div>
 
@@ -138,23 +122,23 @@ export function PortalOverview() {
             </Link>
           </div>
           <div className="space-y-3">
-            {invoices.map((inv) => (
+            {data.invoices.map((inv) => (
               <div key={inv.id} className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-sm font-medium">{inv.id}</p>
                   <p className="text-xs text-muted-foreground">{inv.dueDate}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${invoiceStatus[inv.status]}`}>
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${invoiceStatus[inv.status] ?? ''}`}>
                     {inv.status}
                   </span>
                   <span className="text-sm font-semibold">{inv.amount}</span>
-                  <button className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors" aria-label="Download invoice">
-                    <Download className="w-3.5 h-3.5" />
-                  </button>
                 </div>
               </div>
             ))}
+            {data.invoices.length === 0 && (
+              <p className="text-sm text-muted-foreground py-4">No invoices yet.</p>
+            )}
           </div>
         </motion.div>
 
@@ -172,8 +156,8 @@ export function PortalOverview() {
             </Link>
           </div>
           <div className="space-y-3">
-            {messages.map((msg) => (
-              <div key={msg.subject} className="flex items-start gap-3 group cursor-pointer">
+            {data.messages.map((msg, i) => (
+              <div key={i} className="flex items-start gap-3 group cursor-pointer">
                 <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0 text-xs font-bold text-muted-foreground">
                   {msg.from.slice(0, 2).toUpperCase()}
                 </div>
@@ -189,6 +173,9 @@ export function PortalOverview() {
                 </div>
               </div>
             ))}
+            {data.messages.length === 0 && (
+              <p className="text-sm text-muted-foreground py-4">No messages yet.</p>
+            )}
           </div>
         </motion.div>
       </div>

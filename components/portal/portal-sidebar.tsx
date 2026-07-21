@@ -1,24 +1,36 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
   LayoutDashboard, FolderKanban, FileText, MessageSquare,
   Folder, HelpCircle, LogOut, Zap, Settings,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { getInitials } from '@/lib/format'
+import type { PortalClientOption } from '@/lib/queries/portal'
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Overview', href: '/portal' },
   { icon: FolderKanban, label: 'My Projects', href: '/portal/projects' },
   { icon: FileText, label: 'Invoices', href: '/portal/invoices' },
-  { icon: MessageSquare, label: 'Messages', href: '/portal/messages', badge: 2 },
+  { icon: MessageSquare, label: 'Messages', href: '/portal/messages' },
   { icon: Folder, label: 'Files', href: '/portal/files' },
   { icon: HelpCircle, label: 'Support', href: '/portal/support' },
 ]
 
-export function PortalSidebar() {
+export function PortalSidebar({ clients }: { clients: PortalClientOption[] }) {
   const pathname = usePathname()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const activeId = searchParams.get('client')
+  const activeClient = clients.find((c) => c.id === activeId) ?? clients[0]
+
+  const handleSwitch = (clientId: string) => {
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('client', clientId)
+    router.push(`${pathname}?${params.toString()}`)
+  }
 
   return (
     <aside className="w-56 shrink-0 flex flex-col bg-card border-r border-border">
@@ -35,27 +47,45 @@ export function PortalSidebar() {
         </Link>
       </div>
 
-      {/* Client info */}
+      {/* Client info / switcher */}
       <div className="p-3 border-b border-border">
-        <div className="flex items-center gap-2.5 px-2 py-2 rounded-xl bg-primary/5 border border-primary/10">
-          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-            <span className="text-xs font-bold text-primary">NV</span>
+        {activeClient ? (
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2.5 px-2 py-2 rounded-xl bg-primary/5 border border-primary/10">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                <span className="text-xs font-bold text-primary">{getInitials(activeClient.name)}</span>
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold truncate">{activeClient.name}</p>
+                <p className="text-[10px] text-muted-foreground truncate">{activeClient.email}</p>
+              </div>
+            </div>
+            {clients.length > 1 && (
+              <select
+                value={activeClient.id}
+                onChange={(e) => handleSwitch(e.target.value)}
+                className="w-full text-[10px] px-2 py-1.5 rounded-lg border border-border bg-background text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/30"
+              >
+                {clients.map((c) => (
+                  <option key={c.id} value={c.id}>Viewing as: {c.name}</option>
+                ))}
+              </select>
+            )}
           </div>
-          <div className="min-w-0">
-            <p className="text-xs font-semibold truncate">Nexus Ventures</p>
-            <p className="text-[10px] text-muted-foreground truncate">admin@nexusventures.com</p>
-          </div>
-        </div>
+        ) : (
+          <p className="text-xs text-muted-foreground px-2 py-2">No clients yet</p>
+        )}
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 py-3 px-2 space-y-0.5">
         {navItems.map((item) => {
           const active = pathname === item.href
+          const href = activeClient ? `${item.href}?client=${activeClient.id}` : item.href
           return (
             <Link
               key={item.href}
-              href={item.href}
+              href={href}
               className={cn(
                 'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-medium transition-colors relative',
                 active
@@ -65,11 +95,6 @@ export function PortalSidebar() {
             >
               <item.icon className="w-4 h-4 shrink-0" />
               <span className="flex-1 truncate">{item.label}</span>
-              {item.badge ? (
-                <span className="bg-primary text-primary-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                  {item.badge}
-                </span>
-              ) : null}
             </Link>
           )
         })}

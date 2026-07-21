@@ -1,9 +1,10 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { useState } from 'react'
+import { useActionState, useState } from 'react'
 import { Mail, Phone, MapPin, MessageSquare, Clock, Send, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { submitContactLead, type ContactFormState } from '@/lib/actions/contact'
 
 const services = [
   'Web Development', 'UI/UX Design', 'Branding', 'AI Agents',
@@ -13,16 +14,11 @@ const services = [
 
 const budgets = ['< ₹25,000', '₹25,000 – ₹75,000', '₹75,000 – ₹2,00,000', '> ₹2,00,000', 'Let\'s discuss']
 
-export function ContactContent() {
-  const [submitted, setSubmitted] = useState(false)
-  const [form, setForm] = useState({
-    name: '', email: '', phone: '', company: '', service: '', budget: '', message: '',
-  })
+const initialState: ContactFormState = {}
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setSubmitted(true)
-  }
+export function ContactContent() {
+  const [state, formAction, pending] = useActionState(submitContactLead, initialState)
+  const [budget, setBudget] = useState('')
 
   return (
     <>
@@ -96,7 +92,7 @@ export function ContactContent() {
 
             {/* Form */}
             <div className="lg:col-span-2">
-              {submitted ? (
+              {state.success ? (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -109,15 +105,12 @@ export function ContactContent() {
                   <p className="text-muted-foreground max-w-sm">
                     Thank you for reaching out. We&apos;ll review your project and get back to you within 24 hours.
                   </p>
-                  <Button onClick={() => setSubmitted(false)} className="mt-6" variant="outline">
-                    Send Another
-                  </Button>
                 </motion.div>
               ) : (
                 <motion.form
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  onSubmit={handleSubmit}
+                  action={formAction}
                   className="bg-card border border-border rounded-3xl p-8 space-y-5"
                 >
                   <h2 className="text-2xl font-bold">Start Your Project</h2>
@@ -132,11 +125,10 @@ export function ContactContent() {
                       <div key={field.key}>
                         <label className="block text-sm font-medium mb-1.5">{field.label}</label>
                         <input
+                          name={field.key}
                           type={field.type}
                           placeholder={field.placeholder}
                           required={field.key === 'name' || field.key === 'email'}
-                          value={form[field.key as keyof typeof form]}
-                          onChange={(e) => setForm({ ...form, [field.key]: e.target.value })}
                           className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
                         />
                       </div>
@@ -146,12 +138,12 @@ export function ContactContent() {
                   <div>
                     <label className="block text-sm font-medium mb-1.5">Service Needed</label>
                     <select
+                      name="service"
                       required
-                      value={form.service}
-                      onChange={(e) => setForm({ ...form, service: e.target.value })}
+                      defaultValue=""
                       className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
                     >
-                      <option value="">Select a service</option>
+                      <option value="" disabled>Select a service</option>
                       {services.map((s) => (
                         <option key={s} value={s}>{s}</option>
                       ))}
@@ -160,14 +152,15 @@ export function ContactContent() {
 
                   <div>
                     <label className="block text-sm font-medium mb-1.5">Project Budget</label>
+                    <input type="hidden" name="budget" value={budget} />
                     <div className="flex flex-wrap gap-2">
                       {budgets.map((b) => (
                         <button
                           key={b}
                           type="button"
-                          onClick={() => setForm({ ...form, budget: b })}
+                          onClick={() => setBudget(b)}
                           className={`px-4 py-2 rounded-xl text-sm border transition-colors ${
-                            form.budget === b
+                            budget === b
                               ? 'bg-primary text-primary-foreground border-primary'
                               : 'border-border text-muted-foreground hover:border-primary/40 hover:text-foreground'
                           }`}
@@ -181,17 +174,18 @@ export function ContactContent() {
                   <div>
                     <label className="block text-sm font-medium mb-1.5">Project Details</label>
                     <textarea
+                      name="message"
                       rows={4}
                       required
                       placeholder="Tell us about your project, goals, timeline, and any specific requirements..."
-                      value={form.message}
-                      onChange={(e) => setForm({ ...form, message: e.target.value })}
                       className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors resize-none"
                     />
                   </div>
 
-                  <Button type="submit" size="lg" className="w-full gap-2">
-                    <Send className="w-4 h-4" /> Send Message
+                  {state.error && <p className="text-sm text-destructive">{state.error}</p>}
+
+                  <Button type="submit" size="lg" className="w-full gap-2" disabled={pending}>
+                    <Send className="w-4 h-4" /> {pending ? 'Sending…' : 'Send Message'}
                   </Button>
                 </motion.form>
               )}

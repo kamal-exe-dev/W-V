@@ -3,45 +3,10 @@
 import { motion } from 'framer-motion'
 import { useState } from 'react'
 import { Download, Search, CheckCircle, Clock, AlertCircle, CreditCard } from 'lucide-react'
+import { formatINR } from '@/lib/format'
+import type { getPortalInvoicesList } from '@/lib/queries/portal'
 
-const invoices = [
-  {
-    id: 'INV-2025-042',
-    project: 'Nexus E-Commerce Platform',
-    amount: 120000,
-    status: 'Due',
-    issued: 'Jul 15, 2025',
-    due: 'Jul 31, 2025',
-    items: ['Backend Integration - Phase 2', 'API Development', 'Testing Setup'],
-  },
-  {
-    id: 'INV-2025-038',
-    project: 'SEO Campaign Q3',
-    amount: 35000,
-    status: 'Paid',
-    issued: 'Jun 28, 2025',
-    due: 'Jul 10, 2025',
-    items: ['SEO Audit', 'Keyword Research Report'],
-  },
-  {
-    id: 'INV-2025-031',
-    project: 'Nexus E-Commerce Platform',
-    amount: 240000,
-    status: 'Paid',
-    issued: 'Jun 1, 2025',
-    due: 'Jun 15, 2025',
-    items: ['UI/UX Design', 'Frontend Development', 'Design System'],
-  },
-  {
-    id: 'INV-2025-018',
-    project: 'Mobile App Design',
-    amount: 60000,
-    status: 'Paid',
-    issued: 'Apr 15, 2025',
-    due: 'Apr 30, 2025',
-    items: ['Research', 'Wireframes', 'User Testing'],
-  },
-]
+type Invoice = Awaited<ReturnType<typeof getPortalInvoicesList>>[number]
 
 const statusConfig: Record<string, { color: string; icon: React.ElementType; label: string }> = {
   Due: { color: 'text-amber-500 bg-amber-500/10', icon: Clock, label: 'Payment Due' },
@@ -49,16 +14,12 @@ const statusConfig: Record<string, { color: string; icon: React.ElementType; lab
   Overdue: { color: 'text-red-500 bg-red-500/10', icon: AlertCircle, label: 'Overdue' },
 }
 
-function formatINR(n: number) {
-  return '₹' + n.toLocaleString('en-IN')
-}
-
-export function PortalInvoices() {
+export function PortalInvoices({ invoices }: { invoices: Invoice[] }) {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<'All' | 'Due' | 'Paid' | 'Overdue'>('All')
 
   const totalPaid = invoices.filter((i) => i.status === 'Paid').reduce((s, i) => s + i.amount, 0)
-  const totalDue = invoices.filter((i) => i.status === 'Due').reduce((s, i) => s + i.amount, 0)
+  const totalDue = invoices.filter((i) => i.status === 'Due' || i.status === 'Overdue').reduce((s, i) => s + i.amount, 0)
 
   const filtered = invoices.filter((inv) => {
     const matchSearch =
@@ -135,7 +96,7 @@ export function PortalInvoices() {
       {/* Invoices List */}
       <div className="space-y-3">
         {filtered.map((inv, i) => {
-          const { color, icon: StatusIcon, label } = statusConfig[inv.status]
+          const { color, icon: StatusIcon, label } = statusConfig[inv.status] ?? statusConfig.Due!
           return (
             <motion.div
               key={inv.id}
@@ -153,14 +114,7 @@ export function PortalInvoices() {
                       {label}
                     </span>
                   </div>
-                  <p className="text-xs text-muted-foreground mb-2">{inv.project}</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {inv.items.map((item) => (
-                      <span key={item} className="text-[10px] px-2 py-0.5 bg-muted rounded-full text-muted-foreground">
-                        {item}
-                      </span>
-                    ))}
-                  </div>
+                  <p className="text-xs text-muted-foreground">{inv.project}</p>
                 </div>
                 <div className="text-right shrink-0">
                   <p className="text-lg font-bold">{formatINR(inv.amount)}</p>
@@ -169,12 +123,20 @@ export function PortalInvoices() {
                 </div>
               </div>
               <div className="flex gap-2 mt-4 pt-4 border-t border-border">
-                <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted text-muted-foreground text-xs font-medium hover:bg-accent hover:text-foreground transition-colors">
+                <button
+                  disabled
+                  title="PDF export isn't wired up yet"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted text-muted-foreground text-xs font-medium opacity-60 cursor-not-allowed"
+                >
                   <Download className="w-3.5 h-3.5" />
                   Download PDF
                 </button>
-                {inv.status === 'Due' && (
-                  <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors">
+                {inv.status !== 'Paid' && (
+                  <button
+                    disabled
+                    title="Payment gateway isn't connected yet"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium opacity-60 cursor-not-allowed"
+                  >
                     <CreditCard className="w-3.5 h-3.5" />
                     Pay Now
                   </button>
@@ -183,6 +145,9 @@ export function PortalInvoices() {
             </motion.div>
           )
         })}
+        {filtered.length === 0 && (
+          <p className="text-sm text-muted-foreground text-center py-10">No invoices match your search.</p>
+        )}
       </div>
     </div>
   )

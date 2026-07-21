@@ -6,81 +6,10 @@ import {
   Search, CheckCircle, Clock, AlertCircle, Circle,
   MessageSquare, FileText, ChevronRight,
 } from 'lucide-react'
+import Link from 'next/link'
+import type { getPortalProjectsList } from '@/lib/queries/portal'
 
-const projects = [
-  {
-    id: 1,
-    name: 'Nexus E-Commerce Platform',
-    description: 'Full-stack e-commerce solution with Shopify integration, custom checkout, and admin dashboard.',
-    status: 'In Progress',
-    progress: 72,
-    startDate: 'May 1, 2025',
-    dueDate: 'Aug 15, 2025',
-    manager: 'Arjun S.',
-    budget: '₹2,40,000',
-    milestones: [
-      { name: 'Discovery & Planning', done: true },
-      { name: 'UI/UX Design', done: true },
-      { name: 'Frontend Development', done: true },
-      { name: 'Backend Integration', done: false },
-      { name: 'Testing & Launch', done: false },
-    ],
-  },
-  {
-    id: 2,
-    name: 'Brand Identity Refresh',
-    description: 'Complete rebrand including logo, typography, color palette, brand guidelines, and collateral.',
-    status: 'Review',
-    progress: 90,
-    startDate: 'Jun 15, 2025',
-    dueDate: 'Jul 28, 2025',
-    manager: 'Priya M.',
-    budget: '₹85,000',
-    milestones: [
-      { name: 'Brand Strategy', done: true },
-      { name: 'Logo Design', done: true },
-      { name: 'Brand Guidelines', done: true },
-      { name: 'Client Review', done: false },
-      { name: 'Final Delivery', done: false },
-    ],
-  },
-  {
-    id: 3,
-    name: 'Mobile App Design',
-    description: 'iOS & Android app UI/UX design with interactive prototypes and developer handoff.',
-    status: 'In Progress',
-    progress: 45,
-    startDate: 'Jun 20, 2025',
-    dueDate: 'Sep 1, 2025',
-    manager: 'Rahul K.',
-    budget: '₹1,20,000',
-    milestones: [
-      { name: 'Research & Wireframes', done: true },
-      { name: 'Design System', done: true },
-      { name: 'Screen Designs', done: false },
-      { name: 'Prototype', done: false },
-      { name: 'Handoff', done: false },
-    ],
-  },
-  {
-    id: 4,
-    name: 'SEO Campaign Q3',
-    description: 'Comprehensive SEO strategy covering on-page, off-page, technical SEO, and content marketing.',
-    status: 'Planning',
-    progress: 10,
-    startDate: 'Jul 15, 2025',
-    dueDate: 'Oct 1, 2025',
-    manager: 'Sneha L.',
-    budget: '₹35,000',
-    milestones: [
-      { name: 'Audit & Strategy', done: false },
-      { name: 'Keyword Research', done: false },
-      { name: 'Content Plan', done: false },
-      { name: 'Implementation', done: false },
-      { name: 'Reporting', done: false },
-    ],
-  },
-]
+type Project = Awaited<ReturnType<typeof getPortalProjectsList>>[number]
 
 const statusConfig: Record<string, { color: string; icon: React.ElementType }> = {
   'In Progress': { color: 'text-blue-500 bg-blue-500/10', icon: Circle },
@@ -89,9 +18,9 @@ const statusConfig: Record<string, { color: string; icon: React.ElementType }> =
   'Completed': { color: 'text-emerald-500 bg-emerald-500/10', icon: CheckCircle },
 }
 
-export function PortalProjects() {
+export function PortalProjects({ projects }: { projects: Project[] }) {
   const [search, setSearch] = useState('')
-  const [expanded, setExpanded] = useState<number | null>(1)
+  const [expanded, setExpanded] = useState<string | null>(projects[0]?.id ?? null)
 
   const filtered = projects.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase())
@@ -119,7 +48,7 @@ export function PortalProjects() {
       {/* Projects */}
       <div className="space-y-3">
         {filtered.map((project, i) => {
-          const { color, icon: StatusIcon } = statusConfig[project.status]
+          const { color, icon: StatusIcon } = statusConfig[project.status] ?? statusConfig.Planning!
           const isExpanded = expanded === project.id
           return (
             <motion.div
@@ -195,20 +124,23 @@ export function PortalProjects() {
                     </div>
                   </div>
                   <div className="flex gap-2 mt-4 pt-4 border-t border-border">
-                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors">
+                    <Link href="/portal/messages" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors">
                       <MessageSquare className="w-3.5 h-3.5" />
                       Message Team
-                    </button>
-                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted text-muted-foreground text-xs font-medium hover:bg-accent hover:text-foreground transition-colors">
+                    </Link>
+                    <Link href="/portal/files" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted text-muted-foreground text-xs font-medium hover:bg-accent hover:text-foreground transition-colors">
                       <FileText className="w-3.5 h-3.5" />
                       View Files
-                    </button>
+                    </Link>
                   </div>
                 </div>
               )}
             </motion.div>
           )
         })}
+        {filtered.length === 0 && (
+          <p className="text-sm text-muted-foreground text-center py-10">No projects match your search.</p>
+        )}
       </div>
     </div>
   )
