@@ -1,6 +1,7 @@
 import Link from 'next/link'
-import { Zap, Mail, Phone, MapPin } from 'lucide-react'
+import { Mail, Phone, MapPin } from 'lucide-react'
 import { TwitterIcon, LinkedinIcon, GithubIcon, InstagramIcon } from '@/components/icons/social-icons'
+import { LogoMark } from '@/components/logo'
 
 const footerLinks = {
   Services: [
@@ -36,9 +37,7 @@ export function Footer() {
           {/* Brand */}
           <div className="lg:col-span-2">
             <Link href="/" className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                <Zap className="w-4 h-4 text-white" />
-              </div>
+              <LogoMark height={32} />
               <span className="font-bold text-lg tracking-tight">
                 Web<span className="text-primary">&</span>Visuals
               </span>

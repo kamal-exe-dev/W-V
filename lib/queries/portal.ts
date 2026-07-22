@@ -1,21 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { formatINR, getInitials } from '@/lib/format'
-
-export async function getPortalClientList() {
-  return prisma.client.findMany({
-    select: { id: true, name: true, contactName: true, email: true },
-    orderBy: { name: 'asc' },
-  })
-}
-
-export type PortalClientOption = Awaited<ReturnType<typeof getPortalClientList>>[number]
-
-export async function resolveActiveClient(requestedId?: string) {
-  const clients = await getPortalClientList()
-  if (clients.length === 0) return { client: null as PortalClientOption | null, clients }
-  const client = clients.find((c) => c.id === requestedId) ?? clients[0]!
-  return { client, clients }
-}
+import { formatINR } from '@/lib/format'
 
 const MILESTONE_LABELS = ['Discovery & Planning', 'Design', 'Development', 'Testing & QA', 'Launch & Handoff']
 const MILESTONE_THRESHOLDS = [10, 35, 65, 85, 100]
@@ -171,8 +155,4 @@ export async function getPortalTickets(clientId: string) {
     priority: t.priority,
     date: t.createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
   }))
-}
-
-export function clientInitials(name: string) {
-  return getInitials(name)
 }

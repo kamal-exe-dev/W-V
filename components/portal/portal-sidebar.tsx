@@ -1,14 +1,16 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { usePathname } from 'next/navigation'
+import { signOut } from 'next-auth/react'
 import {
   LayoutDashboard, FolderKanban, FileText, MessageSquare,
-  Folder, HelpCircle, LogOut, Zap, Settings,
+  Folder, HelpCircle, LogOut, Settings, Bell,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getInitials } from '@/lib/format'
-import type { PortalClientOption } from '@/lib/queries/portal'
+import { LogoMark } from '@/components/logo'
+import type { Client } from '@prisma/client'
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Overview', href: '/portal' },
@@ -16,30 +18,19 @@ const navItems = [
   { icon: FileText, label: 'Invoices', href: '/portal/invoices' },
   { icon: MessageSquare, label: 'Messages', href: '/portal/messages' },
   { icon: Folder, label: 'Files', href: '/portal/files' },
+  { icon: Bell, label: 'Notifications', href: '/portal/notifications' },
   { icon: HelpCircle, label: 'Support', href: '/portal/support' },
 ]
 
-export function PortalSidebar({ clients }: { clients: PortalClientOption[] }) {
+export function PortalSidebar({ client }: { client: Client | null }) {
   const pathname = usePathname()
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const activeId = searchParams.get('client')
-  const activeClient = clients.find((c) => c.id === activeId) ?? clients[0]
-
-  const handleSwitch = (clientId: string) => {
-    const params = new URLSearchParams(searchParams.toString())
-    params.set('client', clientId)
-    router.push(`${pathname}?${params.toString()}`)
-  }
 
   return (
     <aside className="w-56 shrink-0 flex flex-col bg-card border-r border-border">
       {/* Logo */}
       <div className="flex items-center gap-2.5 p-4 h-14 border-b border-border">
         <Link href="/" className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center shrink-0">
-            <Zap className="w-3.5 h-3.5 text-white" />
-          </div>
+          <LogoMark height={28} className="shrink-0" />
           <div>
             <p className="font-bold text-sm leading-none">Web<span className="text-primary">&</span>Visuals</p>
             <p className="text-[10px] text-muted-foreground leading-none mt-0.5">Client Portal</p>
@@ -47,33 +38,20 @@ export function PortalSidebar({ clients }: { clients: PortalClientOption[] }) {
         </Link>
       </div>
 
-      {/* Client info / switcher */}
+      {/* Client info */}
       <div className="p-3 border-b border-border">
-        {activeClient ? (
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2.5 px-2 py-2 rounded-xl bg-primary/5 border border-primary/10">
-              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                <span className="text-xs font-bold text-primary">{getInitials(activeClient.name)}</span>
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-semibold truncate">{activeClient.name}</p>
-                <p className="text-[10px] text-muted-foreground truncate">{activeClient.email}</p>
-              </div>
+        {client ? (
+          <div className="flex items-center gap-2.5 px-2 py-2 rounded-xl bg-primary/5 border border-primary/10">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <span className="text-xs font-bold text-primary">{getInitials(client.name)}</span>
             </div>
-            {clients.length > 1 && (
-              <select
-                value={activeClient.id}
-                onChange={(e) => handleSwitch(e.target.value)}
-                className="w-full text-[10px] px-2 py-1.5 rounded-lg border border-border bg-background text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/30"
-              >
-                {clients.map((c) => (
-                  <option key={c.id} value={c.id}>Viewing as: {c.name}</option>
-                ))}
-              </select>
-            )}
+            <div className="min-w-0">
+              <p className="text-xs font-semibold truncate">{client.name}</p>
+              <p className="text-[10px] text-muted-foreground truncate">{client.email}</p>
+            </div>
           </div>
         ) : (
-          <p className="text-xs text-muted-foreground px-2 py-2">No clients yet</p>
+          <p className="text-xs text-muted-foreground px-2 py-2">No account linked</p>
         )}
       </div>
 
@@ -81,11 +59,10 @@ export function PortalSidebar({ clients }: { clients: PortalClientOption[] }) {
       <nav className="flex-1 py-3 px-2 space-y-0.5">
         {navItems.map((item) => {
           const active = pathname === item.href
-          const href = activeClient ? `${item.href}?client=${activeClient.id}` : item.href
           return (
             <Link
               key={item.href}
-              href={href}
+              href={item.href}
               className={cn(
                 'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-medium transition-colors relative',
                 active
@@ -109,13 +86,13 @@ export function PortalSidebar({ clients }: { clients: PortalClientOption[] }) {
           <Settings className="w-4 h-4 shrink-0" />
           <span>Settings</span>
         </Link>
-        <Link
-          href="/login"
-          className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+        <button
+          onClick={() => signOut({ callbackUrl: '/' })}
+          className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
         >
           <LogOut className="w-4 h-4 shrink-0" />
           <span>Sign Out</span>
-        </Link>
+        </button>
       </div>
     </aside>
   )

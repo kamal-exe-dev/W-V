@@ -1,7 +1,7 @@
-import { ClientsContent } from '@/components/dashboard/clients-content'
-import { getClients } from '@/lib/queries/clients'
+import { ClientsContent } from '@/features/clients'
+import { clientService } from '@/lib/services/client.service'
 
 export default async function ClientsPage() {
-  const clients = await getClients()
+  const clients = await clientService.getClientsForDashboard()
   return <ClientsContent initialClients={clients} />
 }

@@ -3,13 +3,15 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
+import { signOut } from 'next-auth/react'
 import {
   LayoutDashboard, FolderKanban, Users, UserCircle, FileText,
-  BarChart3, DollarSign, MessageSquare, Settings, Zap,
+  BarChart3, DollarSign, MessageSquare, Settings,
   ChevronLeft, ChevronRight, BriefcaseBusiness, Clock,
   Megaphone, HelpCircle, LogOut, Bell,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { LogoMark } from '@/components/logo'
 
 const navGroups = [
   {
@@ -17,6 +19,7 @@ const navGroups = [
     items: [
       { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
       { icon: BarChart3, label: 'Analytics', href: '/dashboard/analytics' },
+      { icon: Bell, label: 'Notifications', href: '/dashboard/notifications' },
     ],
   },
   {
@@ -59,9 +62,7 @@ export function DashboardSidebar() {
       {/* Logo */}
       <div className={cn('flex items-center gap-2.5 p-4 border-b border-border h-14', collapsed && 'justify-center')}>
         <Link href="/" className="flex items-center gap-2 shrink-0">
-          <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center shrink-0">
-            <Zap className="w-3.5 h-3.5 text-white" />
-          </div>
+          <LogoMark height={28} className="shrink-0" />
           {!collapsed && (
             <span className="font-bold text-sm tracking-tight truncate">
               Web<span className="text-primary">&</span>Visuals
@@ -127,7 +128,7 @@ export function DashboardSidebar() {
           {!collapsed && <span>Settings</span>}
         </Link>
         <Link
-          href="/dashboard/help"
+          href="/dashboard/support"
           className={cn(
             'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors',
             collapsed && 'justify-center'
@@ -137,17 +138,17 @@ export function DashboardSidebar() {
           <HelpCircle className={cn('shrink-0', collapsed ? 'w-5 h-5' : 'w-4 h-4')} />
           {!collapsed && <span>Help & Support</span>}
         </Link>
-        <Link
-          href="/login"
+        <button
+          onClick={() => signOut({ callbackUrl: '/' })}
           className={cn(
-            'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors',
+            'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors',
             collapsed && 'justify-center'
           )}
           title={collapsed ? 'Log out' : undefined}
         >
           <LogOut className={cn('shrink-0', collapsed ? 'w-5 h-5' : 'w-4 h-4')} />
           {!collapsed && <span>Log out</span>}
-        </Link>
+        </button>
       </div>
 
       {/* Collapse toggle */}

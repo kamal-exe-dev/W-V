@@ -1,0 +1,5 @@
+export { ClientsContent } from './components/ClientsContent'
+export { createClientAction } from './actions/client.actions'
+export { useCreateClient } from './hooks/use-create-client'
+export { createClientSchema } from './validators/client.validator'
+export type { ClientListItem, CreateClientInput, CreateClientState } from './types/client.types'

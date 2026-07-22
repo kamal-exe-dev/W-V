@@ -1,7 +1,3 @@
-import { PrismaClient } from '@prisma/client'
-
-const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient }
-
-export const prisma = globalForPrisma.prisma ?? new PrismaClient()
-
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+// Backward-compat shim. New code should import from '@/lib/database/prisma' directly.
+// Kept so existing modules don't need touching during the incremental architecture migration.
+export { prisma } from './database/prisma'

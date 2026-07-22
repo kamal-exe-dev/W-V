@@ -1,14 +1,10 @@
 import { PortalInvoices } from '@/components/portal/portal-invoices'
 import { PortalEmptyState } from '@/components/portal/portal-empty'
-import { resolveActiveClient, getPortalInvoicesList } from '@/lib/queries/portal'
+import { getCurrentClient } from '@/lib/auth/get-current-client'
+import { getPortalInvoicesList } from '@/lib/queries/portal'
 
-export default async function PortalInvoicesPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ client?: string }>
-}) {
-  const { client: clientId } = await searchParams
-  const { client } = await resolveActiveClient(clientId)
+export default async function PortalInvoicesPage() {
+  const client = await getCurrentClient()
   if (!client) return <PortalEmptyState />
 
   const invoices = await getPortalInvoicesList(client.id)

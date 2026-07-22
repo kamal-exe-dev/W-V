@@ -4,10 +4,13 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Menu, X, ChevronDown, Zap, Moon, Sun } from 'lucide-react'
+import { useSession } from 'next-auth/react'
+import { Menu, X, ChevronDown, Moon, Sun } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { Button } from '@/components/ui/button'
 import { CommandPalette } from '@/components/command-palette'
+import { UserMenu } from '@/components/navbar/UserMenu'
+import { LogoMark } from '@/components/logo'
 import { cn } from '@/lib/utils'
 
 const services = [
@@ -41,6 +44,7 @@ export function Navbar() {
   const [mounted, setMounted] = useState(false)
   const { theme, setTheme } = useTheme()
   const pathname = usePathname()
+  const { data: session, status } = useSession()
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20)
@@ -64,9 +68,7 @@ export function Navbar() {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 group">
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                <Zap className="w-4 h-4 text-primary-foreground" />
-              </div>
+              <LogoMark height={32} />
               <span className="font-bold text-lg tracking-tight">
                 Web<span className="text-primary">&</span>Visuals
               </span>
@@ -138,16 +140,24 @@ export function Navbar() {
                 ))}
               </button>
 
-              <Link href="/dashboard">
-                <Button variant="outline" size="sm" className="hidden sm:flex">
-                  Dashboard
-                </Button>
-              </Link>
-              <Link href="/contact">
-                <Button size="sm" className="hidden sm:flex">
-                  Get Started
-                </Button>
-              </Link>
+              {mounted && status !== 'loading' && (
+                session ? (
+                  <UserMenu session={session} />
+                ) : (
+                  <>
+                    <Link href="/login">
+                      <Button variant="outline" size="sm" className="hidden sm:flex">
+                        Login
+                      </Button>
+                    </Link>
+                    <Link href="/contact">
+                      <Button size="sm" className="hidden sm:flex">
+                        Get Started
+                      </Button>
+                    </Link>
+                  </>
+                )
+              )}
 
               {/* Mobile Toggle */}
               <button
@@ -203,11 +213,19 @@ export function Navbar() {
               </div>
 
               <div className="mt-auto flex flex-col gap-3">
-                <Link href="/dashboard" onClick={() => setMobileOpen(false)}>
-                  <Button variant="outline" className="w-full">
-                    Dashboard
-                  </Button>
-                </Link>
+                {session ? (
+                  <Link href={session.user.role === 'ADMIN' ? '/dashboard' : '/portal'} onClick={() => setMobileOpen(false)}>
+                    <Button variant="outline" className="w-full">
+                      {session.user.role === 'ADMIN' ? 'Dashboard' : 'Client Portal'}
+                    </Button>
+                  </Link>
+                ) : (
+                  <Link href="/login" onClick={() => setMobileOpen(false)}>
+                    <Button variant="outline" className="w-full">
+                      Login
+                    </Button>
+                  </Link>
+                )}
                 <Link href="/contact" onClick={() => setMobileOpen(false)}>
                   <Button className="w-full">Get Started</Button>
                 </Link>

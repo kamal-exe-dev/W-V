@@ -1,15 +1,11 @@
 import { PortalFiles } from '@/components/portal/portal-files'
 import { PortalEmptyState } from '@/components/portal/portal-empty'
-import { resolveActiveClient, getPortalFilesList } from '@/lib/queries/portal'
-import { prisma } from '@/lib/prisma'
+import { getCurrentClient } from '@/lib/auth/get-current-client'
+import { getPortalFilesList } from '@/lib/queries/portal'
+import { prisma } from '@/lib/database/prisma'
 
-export default async function PortalFilesPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ client?: string }>
-}) {
-  const { client: clientId } = await searchParams
-  const { client } = await resolveActiveClient(clientId)
+export default async function PortalFilesPage() {
+  const client = await getCurrentClient()
   if (!client) return <PortalEmptyState />
 
   const [data, projects] = await Promise.all([
